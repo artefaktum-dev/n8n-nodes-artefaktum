@@ -41,14 +41,15 @@ can also enter directly in Slug mode.
 | Options → Expires In (Hours) | Upload | Delete the artifact automatically after this many hours. `0` keeps it. |
 | Options → External Key | Upload | Your own unique key for this artifact within the project, e.g. a source URL or a hash. |
 | Options → Metadata (JSON) | Upload, Get or Upload | Structured metadata, searchable by filters. |
-| Options → Summary | Upload | A short summary of the content for search; leave empty to let the server derive one for text files. |
 | Options → Tags | Upload, Get or Upload | Comma-separated tags. |
 | Lookup | Get | Find the artifact by ID or by External Key. |
 | Artifact ID | Download, Update, Delete, Get (Lookup = By ID) | The artifact ID, e.g. from a previous Artefaktum node in this workflow. |
+| Output Format | Download | *Binary File* puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown. |
 | External Key | Get (Lookup = By External Key) | The external key to look up. |
 | Project | Get | The project to resolve the external key against (used when Lookup = By External Key). |
-| Download Options → File Name | Download | Override the file name on the binary property. |
-| Download Options → Put Output File in Field | Download | Name of the binary property to write the file to. |
+| Download Options → File Name | Download (Binary File) | Override the file name on the binary property. |
+| Download Options → Put Output File in Field | Download (Binary File) | Name of the binary property to write the file to. |
+| Download Options → Max Characters | Download (Text) | Cut the content after this many characters (default 50,000; 0 returns everything). The output reports `content_truncated` and `content_characters`. |
 | Download Options → Verify Checksum | Download | Whether to compare the downloaded bytes against the stored SHA-256. |
 | Download Options → Version ID | Download | A specific version; defaults to the latest. |
 | Query | Get Many | What you are looking for, in words. Leave empty to list by filters only. |
@@ -116,6 +117,22 @@ for a complete workflow: Manual Trigger → HTTP Request (a weather API) →
 Artefaktum (Get or Upload), caching the response for an hour under a
 per-day key.
 
+### Letting an AI agent read an artifact
+
+n8n does not pass binary files to AI agents, so an agent that uses **Download** with
+the default output sees only the artifact's metadata. Give the agent two Artefaktum
+tools instead:
+
+1. **Get Many** to search. Let the model fill **Query**.
+2. **Download** with **Output Format** set to **Text** to read. Let the model fill
+   **Artifact ID** with an ID from the search results.
+
+The agent searches, picks the artifact that fits, and reads it. Text works for
+text files such as JSON, CSV, Markdown and plain text; for anything else the tool
+answers with a message naming the content type. Long files are cut at
+**Max Characters** and the output says so, which keeps a large file from filling the
+model's context.
+
 ### Limits
 
 Artefaktum enforces per-plan quotas — storage, request rate and artifact
@@ -131,6 +148,10 @@ tens of MB and avoid large batches when running n8n with limited memory.
 Search results are ordered by relevance; there is no sort option because
 the Artefaktum API ranks results itself.
 
+Artefaktum also limits field sizes: a title is at most 500 characters, a description
+10,000, a tag 64, and metadata 16 KB of JSON nested at most 5 levels deep, with at most
+50 tags per artifact. See the [API limits](https://artefaktum.dev/docs/rest/#limits).
+
 ## Resources
 
 - [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
@@ -140,6 +161,8 @@ the Artefaktum API ranks results itself.
 
 ## Version history
 
+- **0.2.0**: Download can return text for AI agents (Output Format);
+  removed Upload's synopsis option.
 - **0.1.2**: Simplify parameter on Get and Get Many; project picker now
   defaults to the list ("From List") instead of the `default` slug.
 - **0.1.1**: Repository moved to the artefaktum-dev organisation; first

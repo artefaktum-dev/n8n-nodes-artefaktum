@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-artefaktum",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Store, find and reuse artifacts between n8n workflows and AI agents with Artefaktum",
   "license": "MIT",
   "homepage": "https://github.com/artefaktum-dev/n8n-nodes-artefaktum",
