@@ -97,7 +97,7 @@ describe('artifact:download as text', () => {
 	it('returns the content in json and no binary property', async () => {
 		const { ctx } = mockExecute({ params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} }, responses: responses() });
 		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
-		expect(item.json).toEqual({ ...artifact, content: 'abc', content_truncated: false, content_characters: 3 });
+		expect(item.json).toEqual({ ...artifact, content: 'abc', content_truncated: false, content_characters: 3, content_version_id: 'v1' });
 		expect(item.binary).toBeUndefined();
 	});
 
@@ -111,7 +111,13 @@ describe('artifact:download as text', () => {
 	it('cuts the content at Max Characters and says so', async () => {
 		const { ctx } = mockExecute({ params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: { maxCharacters: 2 } }, responses: responses() });
 		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
-		expect(item.json).toMatchObject({ content: 'ab', content_truncated: true, content_characters: 3 });
+		expect(item.json).toMatchObject({ content: 'ab', content_truncated: true, content_characters: 3, content_version_id: 'v1' });
+	});
+
+	it('returns the whole content, not empty, when Max Characters is not a number', async () => {
+		const { ctx } = mockExecute({ params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: { maxCharacters: 'abc' } }, responses: responses() });
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.json).toMatchObject({ content: 'abc', content_truncated: false });
 	});
 
 	it('uses 50,000 characters when Max Characters is not set', async () => {
@@ -124,7 +130,7 @@ describe('artifact:download as text', () => {
 		});
 		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
 		expect((item.json.content as string).length).toBe(50_000);
-		expect(item.json).toMatchObject({ content_truncated: true, content_characters: 60_000 });
+		expect(item.json).toMatchObject({ content_truncated: true, content_characters: 60_000, content_version_id: 'v1' });
 	});
 
 	it('still verifies the checksum before returning text', async () => {
@@ -142,5 +148,71 @@ describe('artifact:download as text', () => {
 			responses: [on('GET', '/v1/artifacts/a1', { body: png }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: 'abc' })],
 		});
 		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/image\/png.*Binary File/s);
+	});
+
+	it('refuses a binary file before making any request to storage', async () => {
+		const png = { ...artifact, latest_version: { ...artifact.latest_version, content_type: 'image/png', original_filename: 'a.png' } };
+		const { ctx, calls } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: png }), on('GET', '/v1/artifacts/a1/download', { body: dl })],
+		});
+		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/image\/png.*Binary File/s);
+		expect(calls.some((c) => c.url.includes('r2.test'))).toBe(false);
+	});
+
+	it('refuses a file over 25 MB before making any request to storage', async () => {
+		const big = { ...artifact, latest_version: { ...artifact.latest_version, size_bytes: 26_214_401 } };
+		const { ctx, calls } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: big }), on('GET', '/v1/artifacts/a1/download', { body: dl })],
+		});
+		let message = '';
+		try {
+			await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		} catch (err) {
+			message = (err as Error).message;
+		}
+		expect(message).toContain('25.0 MB');
+		expect(message).toContain('Binary File');
+		expect(calls.some((c) => c.url.includes('r2.test'))).toBe(false);
+	});
+
+	it('does not refuse a file of exactly 25 MB', async () => {
+		const exact = { ...artifact, latest_version: { ...artifact.latest_version, size_bytes: 26_214_400 } };
+		const { ctx } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: exact }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: 'abc' })],
+		});
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.json).toMatchObject({ content: 'abc' });
+	});
+
+	it("checks the SERVED version's type, not latest_version's", async () => {
+		const { ctx, calls } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: { versionId: 'v0' } },
+			responses: [
+				on('GET', '/v1/artifacts/a1', { body: artifact }),
+				on('GET', '/v1/artifacts/a1/download', { body: { ...dl, version_id: 'v0' } }),
+				on('GET', '/v1/artifacts/a1/versions', { body: [v0] }),
+			],
+		});
+		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/application\/x-v0.*Binary File/s);
+		expect(calls.some((c) => c.url.includes('r2.test'))).toBe(false);
+	});
+
+	it('succeeds for a text version served instead of latest, and labels which version it read', async () => {
+		const v0Text = { ...v0, content_type: 'text/plain' };
+		const { ctx } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: { versionId: 'v0' } },
+			responses: [
+				on('GET', '/v1/artifacts/a1', { body: artifact }),
+				on('GET', '/v1/artifacts/a1/download', { body: { ...dl, version_id: 'v0' } }),
+				on('GET', '/v1/artifacts/a1/versions', { body: [v0Text] }),
+				on('GET', 'r2.test', { body: 'zzz' }),
+			],
+		});
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.json.content).toBe('zzz');
+		expect(item.json.content_version_id).toBe('v0');
 	});
 });

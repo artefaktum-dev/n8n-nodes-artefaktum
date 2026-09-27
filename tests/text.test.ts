@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeText, isTextLike, truncate } from '../nodes/Artefaktum/text';
+import { DEFAULT_MAX_CHARACTERS, TEXT_MAX_BYTES, decodeText, isTextLike, resolveMaxCharacters, truncate } from '../nodes/Artefaktum/text';
 
 describe('isTextLike', () => {
 	it.each([
@@ -57,5 +57,33 @@ describe('truncate', () => {
 		const text = 'ab😀cd'; // the emoji is two UTF-16 code units, at index 2 and 3
 		expect(truncate(text, 3).content).toBe('ab');
 		expect(truncate(text, 4).content).toBe('ab😀');
+	});
+});
+
+describe('TEXT_MAX_BYTES', () => {
+	it('is 25 MB, 26,214,400 bytes', () => {
+		expect(TEXT_MAX_BYTES).toBe(26_214_400);
+	});
+});
+
+describe('resolveMaxCharacters', () => {
+	it.each([
+		['undefined', undefined, DEFAULT_MAX_CHARACTERS],
+		['null', null, DEFAULT_MAX_CHARACTERS],
+		['empty string', '', DEFAULT_MAX_CHARACTERS],
+		["'abc'", 'abc', DEFAULT_MAX_CHARACTERS],
+		['{}', {}, DEFAULT_MAX_CHARACTERS],
+		['NaN', NaN, DEFAULT_MAX_CHARACTERS],
+		['Infinity', Infinity, DEFAULT_MAX_CHARACTERS],
+		['0', 0, 0],
+		['-5', -5, 0],
+		["'1200'", '1200', 1200],
+		['1200.9', 1200.9, 1200],
+	])('resolves %s to %d', (_label, raw, expected) => {
+		expect(resolveMaxCharacters(raw)).toBe(expected);
+	});
+
+	it('DEFAULT_MAX_CHARACTERS is 50000', () => {
+		expect(DEFAULT_MAX_CHARACTERS).toBe(50000);
 	});
 });

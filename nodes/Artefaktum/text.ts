@@ -8,6 +8,27 @@
 
 const TEXT_TYPES = new Set(['application/json', 'application/xml', 'application/yaml', 'application/x-yaml', 'application/x-ndjson', 'application/csv']);
 
+/** The largest file Text mode will read: 25 MB. Not a node parameter. */
+export const TEXT_MAX_BYTES = 25 * 1024 * 1024;
+
+/** Max Characters when the parameter is unset. */
+export const DEFAULT_MAX_CHARACTERS = 50000;
+
+/**
+ * Coerce the Max Characters option to a usable cap.
+ *
+ * `undefined`, `null`, `''`, or anything that is not a finite number after `Number(...)`
+ * (e.g. `'abc'`, `{}`, `NaN`, `Infinity`) falls back to the default so a bad value never
+ * silently produces empty content. A finite negative number is clamped to 0, which `truncate`
+ * treats as no limit, same as today.
+ */
+export function resolveMaxCharacters(raw: unknown): number {
+	if (raw === undefined || raw === null || raw === '') return DEFAULT_MAX_CHARACTERS;
+	const num = Number(raw);
+	if (!Number.isFinite(num)) return DEFAULT_MAX_CHARACTERS;
+	return Math.max(0, Math.floor(num));
+}
+
 /** Whether a content type names text: `text/*`, the types above, or any `+json` / `+xml`. */
 export function isTextLike(contentType: string | undefined): boolean {
 	const type = (contentType ?? '').split(';')[0].trim().toLowerCase();
