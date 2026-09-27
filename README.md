@@ -162,7 +162,7 @@ Artefaktum also limits field sizes: a title is at most 500 characters, a descrip
 ## Version history
 
 - **0.2.0**: Download can return text for AI agents (Output Format);
-  removed Upload's synopsis option.
+  Summary option removed.
 - **0.1.2**: Simplify parameter on Get and Get Many; project picker now
   defaults to the list ("From List") instead of the `default` slug.
 - **0.1.1**: Repository moved to the artefaktum-dev organisation; first
