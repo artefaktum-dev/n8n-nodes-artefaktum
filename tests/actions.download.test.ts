@@ -7,7 +7,7 @@ const shaZzz = '17f165d5a5ba695f27c023a83aa2b3463e23810e360b7517127e90161eebabda
 const artifact = { id: 'a1', title: 'T', status: 'ready', latest_version: { id: 'v1', content_type: 'text/plain', original_filename: 'abc.txt', sha256: sha, size_bytes: 3 } };
 const dl = { url: 'https://r2.test/get?sig', method: 'GET', expires_at: '2030-01-01T00:00:00Z', version_id: 'v1' };
 // A version older than latest_version, with its own filename, mime type and digest.
-const v0 = { id: 'v0', version_number: 1, original_filename: 'v0.bin', content_type: 'application/x-v0', size_bytes: 3, etag: null, sha256: shaZzz, summary: null, status: 'ready', created_at: '2026-01-01T00:00:00Z' };
+const v0 = { id: 'v0', version_number: 1, original_filename: 'v0.bin', content_type: 'application/x-v0', size_bytes: 3, etag: null, sha256: shaZzz, status: 'ready', created_at: '2026-01-01T00:00:00Z' };
 
 describe('artifact:download', () => {
 	it('puts verified bytes into the binary property and the artifact into json', async () => {

@@ -36,6 +36,23 @@ describe('artifact:upload', () => {
 		expect(new Date(create.expires_at as string).getTime()).toBeGreaterThan(Date.now() + 1.9 * 3600 * 1000);
 	});
 
+	it('ignores a summary left over in a workflow saved with 0.1.3', async () => {
+		const { ctx, calls } = mockExecute({
+			params: { ...params, uploadOptions: { ...params.uploadOptions, summary: 'left over' } },
+			responses: [
+				on('GET', '/v1/projects', { body: projects }),
+				on('POST', '/v1/artifacts/uploads', { body: ticket }),
+				on('PUT', 'r2.test', { body: '' }),
+				on('POST', '/complete', { body: ticket.artifact }),
+				on('GET', '/v1/artifacts/a1', { body: artifact }),
+			],
+		});
+		const out = await upload({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(out).toEqual([{ json: artifact, pairedItem: { item: 0 } }]);
+		const createCall = calls.find((c) => c.url.endsWith('/v1/artifacts/uploads'))!;
+		expect((createCall.body as Record<string, unknown>).summary).toBeUndefined();
+	});
+
 	it('defaults the title to the filename and omits unset options', async () => {
 		const { ctx, calls } = mockExecute({
 			items: [{ json: {}, binary: { data: { data: Buffer.from('x').toString('base64'), mimeType: 'text/csv', fileName: 'rows.csv' } } }],

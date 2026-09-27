@@ -59,7 +59,7 @@ describe('artifact:getOrUpload', () => {
 		await expect(getOrUpload({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/still being uploaded/);
 	});
 
-	it('never sends summary or expires_at to resolve, even when set', async () => {
+	it('never sends expires_at to resolve, even when set', async () => {
 		const { ctx, calls } = mockExecute({
 			params: { ...params, uploadOptions: { summary: 'x', expiresInHours: 3, description: 'd', tags: 'a' } },
 			responses: [on('GET', '/v1/projects', { body: projects }), on('POST', '/v1/artifacts/resolve', { body: { status: 'hit', artifact } })],

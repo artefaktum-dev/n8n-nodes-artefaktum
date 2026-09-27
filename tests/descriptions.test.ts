@@ -22,13 +22,17 @@ describe('artifact descriptions', () => {
 		expect(key?.displayOptions?.show?.operation).toEqual(['getOrUpload']);
 	});
 
-	it('hides Summary and Expires In (Hours) for getOrUpload (resolve accepts neither)', () => {
+	it('hides Expires In (Hours) for getOrUpload (resolve does not accept it)', () => {
 		const uploadOptions = artifactFields.find((f) => f.name === 'uploadOptions')!;
 		const options = uploadOptions.options as Array<{ name: string; displayOptions?: { show?: Record<string, unknown> } }>;
-		for (const name of ['summary', 'expiresInHours']) {
-			const opt = options.find((o) => o.name === name)!;
-			expect(opt.displayOptions?.show?.['/operation']).toEqual(['upload']);
-		}
+		const opt = options.find((o) => o.name === 'expiresInHours')!;
+		expect(opt.displayOptions?.show?.['/operation']).toEqual(['upload']);
+	});
+
+	it('has no Summary option: the API removed the field', () => {
+		const uploadOptions = artifactFields.find((f) => f.name === 'uploadOptions')!;
+		const names = (uploadOptions.options as Array<{ name: string }>).map((o) => o.name);
+		expect(names).not.toContain('summary');
 	});
 
 	it('gives both Artifact ID fields the same description and placeholder', () => {
