@@ -2,11 +2,13 @@ import type { IDataObject } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { sha256Hex } from '../../content';
 import { apiRequest, storageRequest } from '../../transport';
+import { decodeText, isTextLike, truncate } from '../../text';
 import type { Action } from '../common';
 
 const download: Action = async ({ ctx, itemIndex }) => {
 	const artifactId = (ctx.getNodeParameter('artifactId', itemIndex) as string).trim();
 	if (!artifactId) throw new NodeOperationError(ctx.getNode(), "Parameter 'Artifact ID' is empty", { itemIndex });
+	const outputFormat = ctx.getNodeParameter('outputFormat', itemIndex, 'binary') as string;
 	const options = ctx.getNodeParameter('downloadOptions', itemIndex, {}) as IDataObject;
 	const property = (options.binaryPropertyName as string) || 'data';
 	const verify = options.verifyChecksum !== false;
@@ -33,6 +35,19 @@ const download: Action = async ({ ctx, itemIndex }) => {
 	}
 	const fileName = (typeof options.fileName === 'string' && options.fileName.trim()) || (typeof version.original_filename === 'string' ? version.original_filename : undefined);
 	const mimeType = typeof version.content_type === 'string' ? version.content_type : undefined;
+	if (outputFormat === 'text') {
+		if (!isTextLike(mimeType)) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Artifact ${artifactId} has content type '${mimeType ?? 'unknown'}', which is not text. Set Output Format to Binary File to download it.`,
+				{ itemIndex },
+			);
+		}
+		const raw = options.maxCharacters;
+		const maxCharacters = raw === undefined || raw === '' ? 50000 : Math.max(0, Math.floor(Number(raw)));
+		const { content, truncated, characters } = truncate(decodeText(bytes), maxCharacters);
+		return [{ json: { ...artifact, content, content_truncated: truncated, content_characters: characters }, pairedItem: { item: itemIndex } }];
+	}
 	const binary = await ctx.helpers.prepareBinaryData(bytes, fileName, mimeType);
 	return [{ json: artifact, binary: { [property]: binary }, pairedItem: { item: itemIndex } }];
 };

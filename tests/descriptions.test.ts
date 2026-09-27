@@ -69,4 +69,21 @@ describe('artifact descriptions', () => {
 	it('project has one operation', () => {
 		expect((projectOperations.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['getMany']);
 	});
+
+	it('offers Output Format for download only, defaulting to Binary File', () => {
+		const field = artifactFields.find((f) => f.name === 'outputFormat')!;
+		expect(field.displayOptions?.show?.operation).toEqual(['download']);
+		expect(field.default).toBe('binary');
+		expect((field.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['binary', 'text']);
+	});
+
+	it('shows each download option only for the format it applies to', () => {
+		const options = artifactFields.find((f) => f.name === 'downloadOptions')!.options as Array<{ name: string; displayOptions?: { show?: Record<string, unknown> } }>;
+		const shown = (name: string) => options.find((o) => o.name === name)!.displayOptions?.show?.['/outputFormat'];
+		expect(shown('fileName')).toEqual(['binary']);
+		expect(shown('binaryPropertyName')).toEqual(['binary']);
+		expect(shown('maxCharacters')).toEqual(['text']);
+		expect(shown('verifyChecksum')).toBeUndefined();
+		expect(shown('versionId')).toBeUndefined();
+	});
 });

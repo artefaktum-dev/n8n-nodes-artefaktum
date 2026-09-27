@@ -179,6 +179,19 @@ export const artifactFields: INodeProperties[] = [
 		displayOptions: { show: { resource: ['artifact'], operation: ['get'], lookup: ['externalKey'] } },
 	},
 	{
+		displayName: 'Output Format',
+		name: 'outputFormat',
+		type: 'options',
+		noDataExpression: true,
+		default: 'binary',
+		description: 'How to return the file. Choose Text when an AI agent needs to read it: agents cannot see binary files.',
+		options: [
+			{ name: 'Binary File', value: 'binary', description: 'Put the file into a binary property of the output item' },
+			{ name: 'Text', value: 'text', description: 'Put the file content into the "content" field of the output, for text files such as JSON, CSV or Markdown' },
+		],
+		displayOptions: show(['download']),
+	},
+	{
 		displayName: 'Options',
 		name: 'downloadOptions',
 		type: 'collection',
@@ -186,8 +199,9 @@ export const artifactFields: INodeProperties[] = [
 		default: {},
 		displayOptions: show(['download']),
 		options: [
-			{ displayName: 'File Name', name: 'fileName', type: 'string', default: '', description: 'Override the file name on the binary property' },
-			{ displayName: 'Put Output File in Field', name: 'binaryPropertyName', type: 'string', default: 'data', description: 'Name of the binary property to write the file to' },
+			{ displayName: 'File Name', name: 'fileName', type: 'string', default: '', description: 'Override the file name on the binary property', displayOptions: { show: { '/outputFormat': ['binary'] } } },
+			{ displayName: 'Max Characters', name: 'maxCharacters', type: 'number', typeOptions: { minValue: 0 }, default: 50000, description: 'Cut the content after this many characters. The output says whether it was cut. 0 returns everything.', displayOptions: { show: { '/outputFormat': ['text'] } } },
+			{ displayName: 'Put Output File in Field', name: 'binaryPropertyName', type: 'string', default: 'data', description: 'Name of the binary property to write the file to', displayOptions: { show: { '/outputFormat': ['binary'] } } },
 			{ displayName: 'Verify Checksum', name: 'verifyChecksum', type: 'boolean', default: true, description: 'Whether to compare the downloaded bytes against the stored SHA-256' },
 			{ displayName: 'Version ID', name: 'versionId', type: 'string', default: '', description: 'A specific version; defaults to the latest' },
 		],

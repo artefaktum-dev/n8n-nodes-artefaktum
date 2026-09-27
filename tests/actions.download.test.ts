@@ -90,3 +90,57 @@ describe('artifact:download', () => {
 		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/checksum/i);
 	});
 });
+
+describe('artifact:download as text', () => {
+	const responses = () => [on('GET', '/v1/artifacts/a1', { body: artifact }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: 'abc' })];
+
+	it('returns the content in json and no binary property', async () => {
+		const { ctx } = mockExecute({ params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} }, responses: responses() });
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.json).toEqual({ ...artifact, content: 'abc', content_truncated: false, content_characters: 3 });
+		expect(item.binary).toBeUndefined();
+	});
+
+	it('defaults to binary when a workflow saved with 0.1.3 has no Output Format', async () => {
+		const { ctx } = mockExecute({ params: { artifactId: 'a1', downloadOptions: {} }, responses: responses() });
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.binary?.data).toBeDefined();
+		expect(item.json).toEqual(artifact);
+	});
+
+	it('cuts the content at Max Characters and says so', async () => {
+		const { ctx } = mockExecute({ params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: { maxCharacters: 2 } }, responses: responses() });
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect(item.json).toMatchObject({ content: 'ab', content_truncated: true, content_characters: 3 });
+	});
+
+	it('uses 50,000 characters when Max Characters is not set', async () => {
+		const long = 'x'.repeat(60_000);
+		const shaLong = (await import('node:crypto')).createHash('sha256').update(long).digest('hex');
+		const big = { ...artifact, latest_version: { ...artifact.latest_version, sha256: shaLong, size_bytes: 60_000 } };
+		const { ctx } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: big }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: long })],
+		});
+		const [item] = await download({ ctx, itemIndex: 0, projectCache: new Map() });
+		expect((item.json.content as string).length).toBe(50_000);
+		expect(item.json).toMatchObject({ content_truncated: true, content_characters: 60_000 });
+	});
+
+	it('still verifies the checksum before returning text', async () => {
+		const { ctx } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: artifact }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: 'tampered' })],
+		});
+		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/Checksum mismatch/);
+	});
+
+	it('refuses a binary file and names its type', async () => {
+		const png = { ...artifact, latest_version: { ...artifact.latest_version, content_type: 'image/png', original_filename: 'a.png' } };
+		const { ctx } = mockExecute({
+			params: { artifactId: 'a1', outputFormat: 'text', downloadOptions: {} },
+			responses: [on('GET', '/v1/artifacts/a1', { body: png }), on('GET', '/v1/artifacts/a1/download', { body: dl }), on('GET', 'r2.test', { body: 'abc' })],
+		});
+		await expect(download({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow(/image\/png.*Binary File/s);
+	});
+});
