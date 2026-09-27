@@ -44,7 +44,7 @@ can also enter directly in Slug mode.
 | Options → Tags | Upload, Get or Upload | Comma-separated tags. |
 | Lookup | Get | Find the artifact by ID or by External Key. |
 | Artifact ID | Download, Update, Delete, Get (Lookup = By ID) | The artifact ID, e.g. from a previous Artefaktum node in this workflow. |
-| Output Format | Download | *Binary File* puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown. |
+| Output Format | Download | *Binary File* puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown; it reads files of at most 25 MB and refuses larger ones and non-text ones before downloading anything. |
 | External Key | Get (Lookup = By External Key) | The external key to look up. |
 | Project | Get | The project to resolve the external key against (used when Lookup = By External Key). |
 | Download Options → File Name | Download (Binary File) | Override the file name on the binary property. |
@@ -129,9 +129,12 @@ tools instead:
 
 The agent searches, picks the artifact that fits, and reads it. Text works for
 text files such as JSON, CSV, Markdown and plain text; for anything else the tool
-answers with a message naming the content type. Long files are cut at
-**Max Characters** and the output says so, which keeps a large file from filling the
-model's context.
+answers with a message naming the content type. Only UTF-8 is decoded; bytes
+that are not valid UTF-8 appear as the replacement character (`�`). Files over
+25 MB cannot be read as text at all — the tool refuses before downloading
+anything. Long files are cut at **Max Characters** and the output says so,
+which keeps a large file from filling the model's context. The output also
+carries `content_version_id`, the id of the version that was actually read.
 
 ### Limits
 
@@ -144,6 +147,7 @@ In practice the node's own memory use is the tighter constraint on small
 n8n instances: it buffers each file fully in memory for both upload and
 download, roughly 2–3× the file size per item. Keep individual files to
 tens of MB and avoid large batches when running n8n with limited memory.
+Text mode therefore refuses files over 25 MB.
 
 Search results are ordered by relevance; there is no sort option because
 the Artefaktum API ranks results itself.
@@ -163,6 +167,7 @@ Artefaktum also limits field sizes: a title is at most 500 characters, a descrip
 
 - **0.2.0**: Download can return text for AI agents (Output Format);
   Summary option removed.
+- **0.1.3**: Package author contact updated.
 - **0.1.2**: Simplify parameter on Get and Get Many; project picker now
   defaults to the list ("From List") instead of the `default` slug.
 - **0.1.1**: Repository moved to the artefaktum-dev organisation; first
