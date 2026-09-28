@@ -1,12 +1,12 @@
 # Changelog
 
-## 0.2.0 — 2026-09-27
+## 0.2.0 — 2026-09-28
 
 - Download has a new **Output Format**: *Binary File* (the default, as before) or *Text*. Text puts the file content into the `content` field of the output, so an AI agent can read an artifact. n8n does not pass binary files to agents.
 - New Download option **Max Characters** (default 50,000) caps the text; the output reports `content_truncated` and `content_characters`.
 - Text output also reports `content_version_id`, the id of the version that was actually read.
 - Text refuses non-text files, and files over 25 MB, before downloading anything.
-- Removed the **Summary** option from Upload. The Artefaktum API no longer stores a summary, and the option's claim that the server would derive one was wrong. Workflows that still have it set keep working; the value is ignored. The API also no longer returns `summary` on versions, so an expression such as `{{ $json.latest_version.summary }}` now yields nothing.
+- Removed the **Summary** option from Upload. The Artefaktum API no longer stores a summary, and the option's claim that the server would derive one was wrong. Workflows that still have it set keep working on this version; the value is no longer sent. The API refuses an upload that sends a summary, so versions up to 0.1.3 fail when Summary is set. The API also no longer returns `summary` on versions, so an expression such as `{{ $json.latest_version.summary }}` now yields nothing.
 
 ## 0.1.3 — 2026-09-23
 
