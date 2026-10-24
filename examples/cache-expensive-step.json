@@ -131,6 +131,7 @@
 				"content": "={{ JSON.stringify($json) }}",
 				"title": "=Vilnius weather {{ $now.toFormat('yyyy-LL-dd') }}",
 				"key": "=weather:vilnius:{{ $now.toFormat('yyyy-LL-dd') }}",
+				"ifKeyExists": "version",
 				"uploadOptions": {
 					"contentType": "application/json",
 					"tags": "weather, vilnius"
@@ -153,7 +154,7 @@
 		},
 		{
 			"parameters": {
-				"content": "**Cache an expensive step.** Get looks for today's result by key and returns `found: false` instead of failing when there is none; only then does the expensive step (here an HTTP request) run, and Upload stores its result under the same key. The next run within an hour reads the stored text and skips the request.",
+				"content": "**Cache an expensive step.** Get looks for today's result by key and returns `found: false` instead of failing when there is none; only then does the expensive step (here an HTTP request) run, and Upload stores its result under the same key, adding a new version when a stale copy is already there. The next run within an hour reads the stored text and skips the request.",
 				"height": 200,
 				"width": 380
 			},

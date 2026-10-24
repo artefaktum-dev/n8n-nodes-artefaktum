@@ -40,7 +40,7 @@ under a key.
 | Content | The text to store (text source). |
 | Title | What the artifact is; searched by other agents. Defaults to the file name. |
 | Key | Optional. Your own unique key for this artifact within the project, e.g. `report:sales:2026-10-24` or a source URL. |
-| If Key Exists | Appears once Key is set. *Stop with Error* (default), *Add New Version*, or *Reuse Existing*. |
+| If Key Exists | Appears once Key is set. *Stop With Error* (default), *Add New Version*, or *Reuse Existing*. |
 | Max Age (Seconds) | With *Reuse Existing*: reuse the stored artifact only if it is younger than this. `0` accepts any age. |
 | Options → Description | Longer description; searched semantically. |
 | Options → Tags | Comma-separated tags. |
@@ -49,7 +49,7 @@ under a key.
 | Options → File Name | Stored file name. Defaults to the binary file name, or a generated name for text. |
 | Options → Content Type | MIME type. Defaults to the binary file type, or `text/plain` for text. |
 
-Without a Key, or with *Stop with Error*, Upload creates a new artifact and
+Without a Key, or with *Stop With Error*, Upload creates a new artifact and
 fails if the key is already taken. *Add New Version* stores the file as a new
 version of the artifact with that key (creating it if there is none), so the
 key always points at the latest. *Reuse Existing* returns the stored artifact
@@ -72,7 +72,7 @@ Fetch one artifact: its details, its file, or its text.
 | Key | The key to look up (By Key). |
 | Project | The project to resolve the key in (By Key). |
 | Max Age (Seconds) | By Key: an artifact last updated longer ago than this counts as not found. `0` accepts any age. |
-| If Not Found | By Key: *Stop with Error* (default) or *Return `found: false`*. |
+| If Not Found | By Key: *Stop With Error* (default) or *Return `found: false`*. |
 | Output | *Binary File* (default) puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown; it reads files of at most 25 MB and refuses larger ones and non-text ones before downloading anything. *Details Only* returns the artifact without its file. |
 | Options → Put Output File in Field | Name of the binary property to write the file to (Binary File). |
 | Options → File Name | Override the file name on the binary property (Binary File). |
@@ -157,7 +157,11 @@ already stored.
 > Max Age `3600`, If Not Found = Return `found: false`, Output = Text) → **IF**
 > `{{ $json.found }}` → true: use `{{ JSON.parse($json.content) }}`; false: the
 > expensive step (for example an HTTP Request) → **Upload** (same Key, text
-> content).
+> content, If Key Exists = Add New Version).
+
+If Key Exists = Add New Version matters because a stale copy (older than Max
+Age) still holds the key: the new result becomes its latest version instead of
+failing as a duplicate.
 
 See [`examples/cache-expensive-step.json`](examples/cache-expensive-step.json)
 for the complete workflow.

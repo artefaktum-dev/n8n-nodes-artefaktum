@@ -14,7 +14,7 @@ Breaking: the operations were redesigned around five verbs. Workflows saved with
 
 New:
 
-- Upload has an optional top-level **Key** and **If Key Exists**: Stop with Error, Add New Version, or Reuse Existing (with **Max Age**, output `cache: "hit"` or `"created"`).
+- Upload has an optional top-level **Key** and **If Key Exists**: Stop With Error, Add New Version, or Reuse Existing (with **Max Age**, output `cache: "hit"` or `"created"`).
 - Get can look an artifact up **By Key**, with **Max Age** and **If Not Found** = Return `found: false`, so a workflow can branch on a cache miss and skip the expensive step.
 - Get has **Output** = Binary File, Text or Details Only.
 - Project defaults to the slug `default` on every operation.
