@@ -1,0 +1,225 @@
+{
+	"name": "Cache an expensive step with Artefaktum",
+	"nodes": [
+		{
+			"parameters": {},
+			"id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+			"name": "Manual Trigger",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			]
+		},
+		{
+			"parameters": {
+				"operation": "get",
+				"lookup": "key",
+				"key": "=weather:vilnius:{{ $now.toFormat('yyyy-LL-dd') }}",
+				"project": {
+					"__rl": true,
+					"mode": "slug",
+					"value": "default"
+				},
+				"maxAgeSeconds": 3600,
+				"ifNotFound": "empty",
+				"output": "text",
+				"getOptions": {}
+			},
+			"id": "a7c3d3c6-3b2c-4eac-9f40-4a8d4e1b3d4e",
+			"name": "Get cached weather",
+			"type": "n8n-nodes-artefaktum.artefaktum",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"credentials": {
+				"artefaktumApi": {
+					"id": "1",
+					"name": "Artefaktum API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"conditions": {
+					"options": {
+						"caseSensitive": true,
+						"leftValue": "",
+						"typeValidation": "strict",
+						"version": 2
+					},
+					"conditions": [
+						{
+							"id": "b8d4e4d7-4c3d-4fbd-8a51-5b9e5f2c4e5f",
+							"leftValue": "={{ $json.found }}",
+							"rightValue": "",
+							"operator": {
+								"type": "boolean",
+								"operation": "true",
+								"singleValue": true
+							}
+						}
+					],
+					"combinator": "and"
+				},
+				"options": {}
+			},
+			"id": "c9e5f5e8-5d4e-4ace-9b62-6caf6a3d5f60",
+			"name": "Found?",
+			"type": "n8n-nodes-base.if",
+			"typeVersion": 2.2,
+			"position": [
+				440,
+				0
+			]
+		},
+		{
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "dafa06f9-6e5f-4bdf-8c73-7dbf7b4e6a71",
+							"name": "weather",
+							"value": "={{ JSON.parse($json.content) }}",
+							"type": "object"
+						}
+					]
+				},
+				"options": {}
+			},
+			"id": "ebfb170a-7f60-4cef-9d84-8ecf8c5f7b82",
+			"name": "Use cached weather",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.4,
+			"position": [
+				660,
+				-100
+			]
+		},
+		{
+			"parameters": {
+				"url": "https://api.open-meteo.com/v1/forecast?latitude=54.69&longitude=25.28&current=temperature_2m",
+				"options": {
+					"response": {
+						"response": {
+							"responseFormat": "json"
+						}
+					}
+				}
+			},
+			"id": "e5a1b1a4-1f0a-4c8a-9d2e-2e6b2c9a1b2c",
+			"name": "HTTP Request",
+			"type": "n8n-nodes-base.httpRequest",
+			"typeVersion": 4.2,
+			"position": [
+				660,
+				100
+			]
+		},
+		{
+			"parameters": {
+				"operation": "upload",
+				"project": {
+					"__rl": true,
+					"mode": "slug",
+					"value": "default"
+				},
+				"inputDataSource": "text",
+				"content": "={{ JSON.stringify($json) }}",
+				"title": "=Vilnius weather {{ $now.toFormat('yyyy-LL-dd') }}",
+				"key": "=weather:vilnius:{{ $now.toFormat('yyyy-LL-dd') }}",
+				"ifKeyExists": "version",
+				"uploadOptions": {
+					"contentType": "application/json",
+					"tags": "weather, vilnius"
+				}
+			},
+			"id": "f6b2c2b5-2a1b-4d9b-8e3f-3f7c3d0a2c3d",
+			"name": "Store weather",
+			"type": "n8n-nodes-artefaktum.artefaktum",
+			"typeVersion": 1,
+			"position": [
+				880,
+				100
+			],
+			"credentials": {
+				"artefaktumApi": {
+					"id": "1",
+					"name": "Artefaktum API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"content": "**Cache an expensive step.** Get looks for today's result by key and returns `found: false` instead of failing when there is none; only then does the expensive step (here an HTTP request) run, and Upload stores its result under the same key, adding a new version when a stale copy is already there. The next run within an hour reads the stored text and skips the request.",
+				"height": 200,
+				"width": 380
+			},
+			"id": "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+			"name": "Sticky Note",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				180,
+				-280
+			]
+		}
+	],
+	"connections": {
+		"Manual Trigger": {
+			"main": [
+				[
+					{
+						"node": "Get cached weather",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get cached weather": {
+			"main": [
+				[
+					{
+						"node": "Found?",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Found?": {
+			"main": [
+				[
+					{
+						"node": "Use cached weather",
+						"type": "main",
+						"index": 0
+					}
+				],
+				[
+					{
+						"node": "HTTP Request",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"HTTP Request": {
+			"main": [
+				[
+					{
+						"node": "Store weather",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {}
+}

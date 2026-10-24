@@ -15,8 +15,9 @@ export function sha256Hex(bytes: Buffer): string {
 /** The bytes to upload for one item: a binary property, or text typed into the node. */
 export async function readContent(ctx: IExecuteFunctions, itemIndex: number): Promise<Content> {
 	const source = ctx.getNodeParameter('inputDataSource', itemIndex, 'binary') as string;
-	const filenameParam = (ctx.getNodeParameter('filename', itemIndex, '') as string).trim();
-	const contentTypeParam = (ctx.getNodeParameter('contentType', itemIndex, '') as string).trim();
+	const options = ctx.getNodeParameter('uploadOptions', itemIndex, {}) as { filename?: unknown; contentType?: unknown };
+	const filenameParam = String(options.filename ?? '').trim();
+	const contentTypeParam = String(options.contentType ?? '').trim();
 
 	if (source === 'text') {
 		const text = ctx.getNodeParameter('content', itemIndex, '') as string;

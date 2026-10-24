@@ -1,0 +1,299 @@
+{
+  "name": "Artefaktum demo: forecast report, agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// European capitals to fetch a forecast for: [city, key slug, country, latitude, longitude]\nconst capitals = [\n  ['Tirana', 'tirana', 'Albania', 41.3275, 19.8187],\n  ['Andorra la Vella', 'andorra-la-vella', 'Andorra', 42.5063, 1.5218],\n  ['Vienna', 'vienna', 'Austria', 48.2082, 16.3738],\n  ['Minsk', 'minsk', 'Belarus', 53.9006, 27.559],\n  ['Brussels', 'brussels', 'Belgium', 50.8503, 4.3517],\n  ['Sarajevo', 'sarajevo', 'Bosnia and Herzegovina', 43.8563, 18.4131],\n  ['Sofia', 'sofia', 'Bulgaria', 42.6977, 23.3219],\n  ['Zagreb', 'zagreb', 'Croatia', 45.815, 15.9819],\n  ['Nicosia', 'nicosia', 'Cyprus', 35.1856, 33.3823],\n  ['Prague', 'prague', 'Czechia', 50.0755, 14.4378],\n  ['Copenhagen', 'copenhagen', 'Denmark', 55.6761, 12.5683],\n  ['Tallinn', 'tallinn', 'Estonia', 59.437, 24.7536],\n  ['Helsinki', 'helsinki', 'Finland', 60.1699, 24.9384],\n  ['Paris', 'paris', 'France', 48.8566, 2.3522],\n  ['Berlin', 'berlin', 'Germany', 52.52, 13.405],\n  ['Athens', 'athens', 'Greece', 37.9838, 23.7275],\n  ['Budapest', 'budapest', 'Hungary', 47.4979, 19.0402],\n  ['Reykjavik', 'reykjavik', 'Iceland', 64.1466, -21.9426],\n  ['Dublin', 'dublin', 'Ireland', 53.3498, -6.2603],\n  ['Rome', 'rome', 'Italy', 41.9028, 12.4964],\n  ['Pristina', 'pristina', 'Kosovo', 42.6629, 21.1655],\n  ['Riga', 'riga', 'Latvia', 56.9496, 24.1052],\n  ['Vaduz', 'vaduz', 'Liechtenstein', 47.141, 9.5209],\n  ['Vilnius', 'vilnius', 'Lithuania', 54.6872, 25.2797],\n  ['Luxembourg', 'luxembourg', 'Luxembourg', 49.6116, 6.1319],\n  ['Valletta', 'valletta', 'Malta', 35.8989, 14.5146],\n  ['Chișinău', 'chisinau', 'Moldova', 47.0105, 28.8638],\n  ['Monaco', 'monaco', 'Monaco', 43.7384, 7.4246],\n  ['Podgorica', 'podgorica', 'Montenegro', 42.4304, 19.2594],\n  ['Amsterdam', 'amsterdam', 'Netherlands', 52.3676, 4.9041],\n  ['Skopje', 'skopje', 'North Macedonia', 41.9981, 21.4254],\n  ['Oslo', 'oslo', 'Norway', 59.9139, 10.7522],\n  ['Warsaw', 'warsaw', 'Poland', 52.2297, 21.0122],\n  ['Lisbon', 'lisbon', 'Portugal', 38.7223, -9.1393],\n  ['Bucharest', 'bucharest', 'Romania', 44.4268, 26.1025],\n  ['Moscow', 'moscow', 'Russia', 55.7558, 37.6173],\n  ['San Marino', 'san-marino', 'San Marino', 43.9424, 12.4578],\n  ['Belgrade', 'belgrade', 'Serbia', 44.7866, 20.4489],\n  ['Bratislava', 'bratislava', 'Slovakia', 48.1486, 17.1077],\n  ['Ljubljana', 'ljubljana', 'Slovenia', 46.0569, 14.5058],\n  ['Madrid', 'madrid', 'Spain', 40.4168, -3.7038],\n  ['Stockholm', 'stockholm', 'Sweden', 59.3293, 18.0686],\n  ['Bern', 'bern', 'Switzerland', 46.948, 7.4474],\n  ['Kyiv', 'kyiv', 'Ukraine', 50.4501, 30.5234],\n  ['London', 'london', 'United Kingdom', 51.5074, -0.1278],\n  ['Vatican City', 'vatican-city', 'Vatican City', 41.9029, 12.4534],\n];\n\nreturn capitals.map(([city, slug, country, latitude, longitude]) => ({\n  json: { city, slug, country, latitude, longitude },\n}));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "European capitals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $input.all().map((item) => item.json.latitude).join(',') }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $input.all().map((item) => item.json.longitude).join(',') }}"
+            },
+            {
+              "name": "daily",
+              "value": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max"
+            },
+            {
+              "name": "forecast_days",
+              "value": "3"
+            },
+            {
+              "name": "timezone",
+              "value": "auto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Fetch forecast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ],
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Runs once: Open-Meteo accepts a comma-separated list of coordinates and returns one forecast per location, in the same order."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine the forecasts for all capitals into ONE report.\n// The report is the file that gets stored; the description says what it is,\n// and the highlights in the metadata make it easier to find.\nconst capitals = $('European capitals').all().map((item) => item.json);\nconst forecasts = $input.all().map((item) => item.json);\n\n// Fetch forecast returns one forecast per capital, in the order they were requested.\nconst cities = forecasts.map((forecast, i) => {\n  const d = forecast.daily;\n  return {\n    city: capitals[i].city,\n    country: capitals[i].country,\n    latitude: capitals[i].latitude,\n    longitude: capitals[i].longitude,\n    timezone: forecast.timezone,\n    days: d.time.map((date, j) => ({\n      date,\n      temperature_min_c: d.temperature_2m_min[j],\n      temperature_max_c: d.temperature_2m_max[j],\n      precipitation_mm: d.precipitation_sum[j],\n      wind_max_kmh: d.wind_speed_10m_max[j],\n      weather_code: d.weather_code[j],\n    })),\n  };\n});\n\nconst dates = cities.flatMap((c) => c.days.map((day) => day.date)).sort();\nconst from = dates[0];\nconst to = dates[dates.length - 1];\n\n// Highlights across the whole report.\nconst peak = (c) => Math.max(...c.days.map((day) => day.temperature_max_c));\nconst low = (c) => Math.min(...c.days.map((day) => day.temperature_min_c));\nconst rain = (c) => Math.round(c.days.reduce((sum, day) => sum + day.precipitation_mm, 0) * 10) / 10;\nconst top = (score) => cities.reduce((best, c) => (score(c) > score(best) ? c : best));\nconst warmest = top(peak);\nconst coldest = top((c) => -low(c));\nconst wettest = top(rain);\n\nreturn [\n  {\n    json: {\n      report: {\n        title: `European capitals weather forecast ${from} to ${to}`,\n        source: 'Open-Meteo',\n        generated_at: $now.toISO(),\n        from,\n        to,\n        capitals: cities.length,\n        cities,\n      },\n      description:\n        `Three-day weather forecast for ${cities.length} European capitals, ${from} to ${to}, from Open-Meteo. ` +\n        `One entry per capital, with the minimum and maximum temperature, precipitation and maximum wind speed for each day. ` +\n        `Read the file for the values.`,\n      metadata: {\n        region: 'Europe',\n        capitals: cities.length,\n        from,\n        to,\n        source: 'Open-Meteo',\n        warmest: { city: warmest.city, temperature_max_c: peak(warmest) },\n        coldest: { city: coldest.city, temperature_min_c: low(coldest) },\n        wettest: { city: wettest.city, precipitation_mm: rain(wettest) },\n      },\n    },\n  },\n];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Build report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "project": {
+          "__rl": true,
+          "mode": "slug",
+          "value": "default"
+        },
+        "inputDataSource": "text",
+        "content": "={{ JSON.stringify($json.report) }}",
+        "title": "={{ $json.report.title }}",
+        "key": "=forecast:european-capitals:{{ $json.report.from }}",
+        "ifKeyExists": "reuse",
+        "maxAgeSeconds": 3600,
+        "uploadOptions": {
+          "description": "={{ $json.description }}",
+          "tags": "weather, forecast, europe, capitals, report",
+          "metadata": "={{ JSON.stringify($json.metadata) }}",
+          "filename": "=european-capitals-forecast-{{ $json.report.from }}.json",
+          "contentType": "application/json"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Store report",
+      "type": "n8n-nodes-artefaktum.artefaktum",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        320
+      ],
+      "webhookId": "a1000000-0000-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Today is {{ $now.toFormat('yyyy-LL-dd') }} and tomorrow is {{ $now.plus({ days: 1 }).toFormat('yyyy-LL-dd') }}. When a question says today or tomorrow, answer with the values listed for exactly that date. You are an assistant with access to Artefaktum, a store of artifacts (files plus metadata) that other workflows have saved. Work in three steps. First, use the Search artifacts tool to find artifacts that could answer the question. Second, pick the artifact that fits best, judging by its title, description and dates. Third, use the Read artifact tool with that artifact's id to read the file itself. Answer only from what the file says, and name the title of the artifact you read. If the result says content_truncated is true, say that you only saw part of the file. If nothing relevant is stored, say so."
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        224,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        128,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search the artifacts stored in Artefaktum by describing what you are looking for in plain words. Returns up to 5 matches, each with its id, title, description, tags and dates. It does not return file contents: use Read artifact for that.",
+        "operation": "search",
+        "project": {
+          "__rl": true,
+          "mode": "slug",
+          "value": "default"
+        },
+        "query": "={{ $fromAI('query', 'What to search for, in plain words, e.g. \"weather forecast for European capitals\"', 'string') }}",
+        "limit": 5,
+        "filters": {},
+        "searchOptions": {
+          "mode": "hybrid",
+          "simplify": true
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Search artifacts",
+      "type": "n8n-nodes-artefaktum.artefaktumTool",
+      "typeVersion": 1,
+      "position": [
+        368,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Read the file of one artifact as text. Give it the artifact id from a search result. Returns the file content in the field 'content'. If 'content_truncated' is true, the file was longer than what was returned.",
+        "operation": "get",
+        "lookup": "id",
+        "artifactId": "={{ $fromAI('artifact_id', 'The id of the artifact to read, taken from a search result', 'string') }}",
+        "output": "text",
+        "getOptions": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000a",
+      "name": "Read artifact",
+      "type": "n8n-nodes-artefaktum.artefaktumTool",
+      "typeVersion": 1,
+      "position": [
+        560,
+        544
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "European capitals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "European capitals": {
+      "main": [
+        [
+          {
+            "node": "Fetch forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch forecast": {
+      "main": [
+        [
+          {
+            "node": "Build report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build report": {
+      "main": [
+        [
+          {
+            "node": "Store report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search artifacts": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read artifact": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

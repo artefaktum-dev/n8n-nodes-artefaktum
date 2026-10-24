@@ -9,22 +9,15 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import del from './actions/artifact/del';
-import download from './actions/artifact/download';
 import get from './actions/artifact/get';
-import getMany from './actions/artifact/getMany';
-import getOrUpload from './actions/artifact/getOrUpload';
+import search from './actions/artifact/search';
 import update from './actions/artifact/update';
 import upload from './actions/artifact/upload';
 import type { Action } from './actions/common';
-import projectGetMany from './actions/project/getMany';
 import { artifactFields, artifactOperations } from './descriptions/artifact';
-import { projectFields, projectOperations } from './descriptions/project';
 import { searchProjects } from './projects';
 
-const ACTIONS: Record<string, Record<string, Action>> = {
-	artifact: { upload, getOrUpload, download, get, getMany, update, delete: del },
-	project: { getMany: projectGetMany },
-};
+const ACTIONS: Record<string, Action> = { upload, get, search, update, delete: del };
 
 export class Artefaktum implements INodeType {
 	description: INodeTypeDescription = {
@@ -33,7 +26,7 @@ export class Artefaktum implements INodeType {
 		icon: { light: 'file:artefaktum.svg', dark: 'file:artefaktum.dark.svg' },
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
+		subtitle: '={{ $parameter["operation"] }}',
 		description: 'Store, find and reuse artifacts between workflows and AI agents',
 		defaults: { name: 'Artefaktum' },
 		inputs: [NodeConnectionTypes.Main],
@@ -41,21 +34,9 @@ export class Artefaktum implements INodeType {
 		usableAsTool: true,
 		credentials: [{ name: 'artefaktumApi', required: true }],
 		properties: [
-			{
-				displayName: 'Resource',
-				name: 'resource',
-				type: 'options',
-				noDataExpression: true,
-				default: 'artifact',
-				options: [
-					{ name: 'Artifact', value: 'artifact' },
-					{ name: 'Project', value: 'project' },
-				],
-			},
-			artifactOperations,
-			projectOperations,
-			...artifactFields,
-			...projectFields,
+			// Hidden so n8n can resolve each operation's action for AI tool descriptions and names.
+			{ displayName: 'Resource', name: 'resource', type: 'hidden', default: 'artifact' },
+			artifactOperations, ...artifactFields,
 		],
 	};
 
@@ -73,10 +54,9 @@ export class Artefaktum implements INodeType {
 		const projectCache = new Map<string, string>();
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-			const resource = this.getNodeParameter('resource', itemIndex) as string;
 			const operation = this.getNodeParameter('operation', itemIndex) as string;
-			const action = ACTIONS[resource]?.[operation];
-			if (!action) throw new NodeOperationError(this.getNode(), `The operation '${operation}' on '${resource}' is not supported`, { itemIndex });
+			const action = ACTIONS[operation];
+			if (!action) throw new NodeOperationError(this.getNode(), `The operation '${operation}' is not supported`, { itemIndex });
 			try {
 				out.push(...(await action({ ctx: this, itemIndex, projectCache })));
 			} catch (error) {
