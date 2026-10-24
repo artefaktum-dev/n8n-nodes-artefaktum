@@ -26,11 +26,12 @@ export const artifactOperations: INodeProperties = {
 	name: 'operation',
 	type: 'options',
 	noDataExpression: true,
+	displayOptions: { show: { resource: ['artifact'] } },
 	default: 'upload',
 	options: [
 		{ name: 'Delete', value: 'delete', action: 'Delete an artifact', description: 'Delete an artifact and all its versions' },
 		{ name: 'Get', value: 'get', action: 'Get an artifact', description: 'Fetch one artifact by ID or key, as a file, as text or as details only' },
-		{ name: 'Search', value: 'search', action: 'Search artifacts', description: 'Find artifacts by description, tags and filters' },
+		{ name: 'Search', value: 'search', action: 'Search artifacts', description: 'Find artifacts by meaning, keywords, tags and filters. Leave Query empty to list by filters only.' },
 		{ name: 'Update', value: 'update', action: 'Update an artifact', description: 'Change title, description, tags, metadata or expiry' },
 		{ name: 'Upload', value: 'upload', action: 'Upload an artifact', description: 'Store a file or text as an artifact, optionally under a key' },
 	],

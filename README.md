@@ -132,7 +132,8 @@ supported yet.
 Mint an API key in the [Artefaktum console](https://artefaktum.dev/console/)
 and paste it into the node credential's **API Key** field. Choose the scopes
 the workflow actually needs: `read`, `write`, `search`, and `delete` — only
-grant `delete` if the workflow deletes artifacts.
+grant `delete` if the workflow deletes artifacts. Update and Delete read the
+artifact first, so their key needs `read` as well as `write`/`delete`.
 
 **Base URL** defaults to `https://api.artefaktum.dev` and only needs to
 change for a self-hosted Artefaktum instance.

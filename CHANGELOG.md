@@ -11,6 +11,9 @@ Breaking: the operations were redesigned around five verbs. Workflows saved with
 - `Get Many` is renamed **Search**; its internal value changes from `getMany` to `search`.
 - `External Key` is renamed **Key** everywhere; the parameter name changes from `externalKey` to `key`.
 - File Name and Content Type (Upload) and Search Mode (Search) move into Options.
+- Get's default **Output** is now Binary File; 0.2.0's Get returned details only. Set Output = Details Only for the old behaviour.
+- **Simplify** moved from a top-level parameter into Get Options and Search Options, and now also applies to the JSON half of Binary File and Text output. `latest_version.*` expressions on old Download output return nothing.
+- Update and Delete accept a **Key** as well as an Artifact ID.
 
 New:
 

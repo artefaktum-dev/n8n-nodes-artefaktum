@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeHelpers, NodeOperationError } from 'n8n-workflow';
 import { Artefaktum } from '../nodes/Artefaktum/Artefaktum.node';
 import { mockExecute, on } from './helpers/mockExecute';
 
 describe('Artefaktum node', () => {
-	it('declares the credential, has no resource parameter and is usable as a tool', () => {
+	it('declares the credential, has a hidden resource parameter and is usable as a tool', () => {
 		const d = new Artefaktum().description;
 		expect(d.credentials).toEqual([{ name: 'artefaktumApi', required: true }]);
 		expect(d.usableAsTool).toBe(true);
-		expect(d.properties.find((p) => p.name === 'resource')).toBeUndefined();
+		expect(d.properties.find((p) => p.name === 'resource')?.type).toBe('hidden');
 		expect(d.subtitle).toBe('={{ $parameter["operation"] }}');
+	});
+
+	it('gives each operation its own AI tool description', () => {
+		const description = new Artefaktum().description;
+		const tool = (operation: string) => NodeHelpers.getToolDescriptionForNode({ parameters: { descriptionType: 'auto', resource: 'artifact', operation } } as never, { description } as never);
+		expect(tool('search')).toContain('Search artifacts');
+		expect(tool('get')).toContain('Get an artifact');
 	});
 
 	it('dispatches per item and pairs outputs', async () => {

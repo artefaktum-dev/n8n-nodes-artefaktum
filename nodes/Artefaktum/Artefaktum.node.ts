@@ -33,7 +33,11 @@ export class Artefaktum implements INodeType {
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
 		credentials: [{ name: 'artefaktumApi', required: true }],
-		properties: [artifactOperations, ...artifactFields],
+		properties: [
+			// Hidden so n8n can resolve each operation's action for AI tool descriptions and names.
+			{ displayName: 'Resource', name: 'resource', type: 'hidden', default: 'artifact' },
+			artifactOperations, ...artifactFields,
+		],
 	};
 
 	methods = {

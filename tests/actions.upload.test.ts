@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NodeOperationError } from 'n8n-workflow';
 import upload from '../nodes/Artefaktum/actions/artifact/upload';
 import { mockExecute, on } from './helpers/mockExecute';
 
@@ -68,6 +69,16 @@ describe('artifact:upload', () => {
 	it('rejects invalid metadata JSON naming the field', async () => {
 		const { ctx } = mockExecute({ params: { ...params, uploadOptions: { metadata: '{nope' } }, responses: [on('GET', '/v1/projects', { body: projects })] });
 		await expect(upload({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toThrow("'Metadata (JSON)'");
+	});
+
+	it('keeps a NodeOperationError for invalid metadata JSON on the plain path', async () => {
+		const { ctx } = mockExecute({ params: { ...params, uploadOptions: { metadata: '{nope' } }, responses: [on('GET', '/v1/projects', { body: projects })] });
+		await expect(upload({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toBeInstanceOf(NodeOperationError);
+	});
+
+	it('keeps a NodeOperationError for invalid metadata JSON on the version path', async () => {
+		const { ctx } = mockExecute({ params: { ...params, ifKeyExists: 'version', uploadOptions: { metadata: '{nope' } }, responses: [on('GET', '/v1/projects', { body: projects }), on('GET', '/by-external-key/', { statusCode: 404, body: { detail: 'nf' } })] });
+		await expect(upload({ ctx, itemIndex: 0, projectCache: new Map() })).rejects.toBeInstanceOf(NodeOperationError);
 	});
 
 	describe('If Key Exists', () => {

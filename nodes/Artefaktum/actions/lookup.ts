@@ -40,9 +40,10 @@ export async function lookupArtifact(
 	if (!key) throw new NodeOperationError(ctx.getNode(), "Parameter 'Key' is empty", { itemIndex });
 	const loc = locator(ctx, itemIndex);
 	const projectId = await resolveProjectId(ctx, loc, projectCache, itemIndex);
-	const maxAge = Number(ctx.getNodeParameter('maxAgeSeconds', itemIndex, 0));
-	const ifNotFound = ctx.getNodeParameter('ifNotFound', itemIndex, 'error') as string;
-	const returnMissing = opts.allowMissing && ifNotFound === 'empty';
+	// Max Age and If Not Found belong to Get only; Update and Delete never read them.
+	const maxAge = opts.allowMissing ? Number(ctx.getNodeParameter('maxAgeSeconds', itemIndex, 0)) : 0;
+	const ifNotFound = opts.allowMissing ? (ctx.getNodeParameter('ifNotFound', itemIndex, 'error') as string) : 'error';
+	const returnMissing = ifNotFound === 'empty';
 	const where = `key '${key}' in project '${loc.value}'`;
 
 	let artifact: IDataObject;

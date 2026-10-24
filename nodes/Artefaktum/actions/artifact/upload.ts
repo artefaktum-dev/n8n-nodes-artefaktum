@@ -9,8 +9,9 @@ import { locator, splitList, parseJsonParam, uploadMetadata, type Action } from 
 const MAX_PENDING_ROUNDS = 5;
 
 const isStatus = (e: unknown, code: string) => (e as { httpCode?: string }).httpCode === code;
-/** NodeApiError passes through unchanged; anything else is wrapped. */
+/** NodeOperationError and NodeApiError pass through unchanged; anything else is wrapped. */
 const rethrow = (ctx: IExecuteFunctions, e: unknown): never => {
+	if (e instanceof NodeOperationError) throw e;
 	throw new NodeApiError(ctx.getNode(), e as JsonObject);
 };
 const out = (json: IDataObject, itemIndex: number) => [{ json, pairedItem: { item: itemIndex } }];

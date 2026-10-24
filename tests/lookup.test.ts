@@ -17,6 +17,15 @@ describe('lookupArtifact', () => {
 		expect(r.found).toBe(true);
 	});
 
+	it('with allowMissing false ignores a stray Max Age', async () => {
+		const { ctx } = mockExecute({
+			params: { ...base, maxAgeSeconds: 1, ifNotFound: 'empty' },
+			responses: [on('GET', '/v1/projects', { body: projects }), on('GET', '/by-external-key/', { body: { id: 'a1', updated_at: ago(tenYears) } })],
+		});
+		const r = await lookupArtifact(ctx, 0, new Map(), { allowMissing: false });
+		expect(r.found).toBe(true);
+	});
+
 	it('by key is url-encoded and carries the project id', async () => {
 		const { ctx, calls } = mockExecute({
 			params: { ...base, key: 'weather:today/vilnius', project: { mode: 'slug', value: 'r' } },

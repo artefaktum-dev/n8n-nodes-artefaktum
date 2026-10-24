@@ -63,6 +63,18 @@ describe.skipIf(!KEY)('live API', () => {
 		expect(item.json.id).toBe(id);
 	}, 60_000);
 
+	it('upload with version under the same key returns the same id', async () => {
+		const [item] = await run(upload, { project, inputDataSource: 'text', content: `v2 ${stamp}`, title: '', key, ifKeyExists: 'version', maxAgeSeconds: 0, uploadOptions: {} });
+		expect(item.json.id).toBe(id);
+	}, 60_000);
+
+	it('reports a stale artifact as not found', async () => {
+		await sleep(1500);
+		const [item] = await run(get, { lookup: 'key', key, project, maxAgeSeconds: 1, ifNotFound: 'empty', output: 'details', getOptions: {} });
+		expect(item.json.found).toBe(false);
+		expect(item.json.reason).toBe('stale');
+	}, 30_000);
+
 	it('gets the content as text', async () => {
 		// The worker may still be indexing; retry until the version is readable.
 		for (let i = 0; i < 10; i++) {
