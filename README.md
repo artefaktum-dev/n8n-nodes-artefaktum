@@ -220,9 +220,9 @@ Artefaktum also limits field sizes: a title is at most 500 characters, a descrip
 
 Importable workflows live in [`examples/templates/`](examples/templates/README.md):
 
-- Cache an expensive step
-- Nightly report, latest wins
-- Process each URL once
+- [Cache an expensive step](examples/templates/cache-expensive-step.json)
+- [Nightly report, latest wins](examples/templates/nightly-report-latest-wins.json)
+- [Process each URL once](examples/templates/process-each-url-once.json)
 
 ## Resources
 

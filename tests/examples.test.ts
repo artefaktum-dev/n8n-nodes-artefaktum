@@ -79,3 +79,47 @@ describe('cache example pattern', () => {
 		expect(main[1].length).toBeGreaterThan(0);
 	});
 });
+
+interface PatternWorkflow {
+	nodes: Array<ExampleNode & { name: string }>;
+	connections: Record<string, { main: Array<Array<{ node: string }>> }>;
+}
+const tpl = (file: string) => templates.find(([n]) => n === file)![1] as unknown as PatternWorkflow;
+
+describe('patterns', () => {
+	it('nightly report adds a version under the key that Get reads', () => {
+		const wf = tpl('nightly-report-latest-wins.json');
+		const upload = wf.nodes.find((n) => n.parameters.operation === 'upload')!;
+		const get = wf.nodes.find((n) => n.parameters.operation === 'get')!;
+		expect(upload.parameters.ifKeyExists).toBe('version');
+		expect(upload.parameters.key).toBe(get.parameters.key);
+	});
+
+	it('process-once reuses at any age and connects both IF outputs', () => {
+		const wf = tpl('process-each-url-once.json');
+		const upload = wf.nodes.find((n) => n.parameters.operation === 'upload')!;
+		expect(upload.parameters.ifKeyExists).toBe('reuse');
+		expect(upload.parameters.maxAgeSeconds).toBe(0);
+		const iff = wf.nodes.find((n) => n.type === 'n8n-nodes-base.if')!;
+		const main = wf.connections[iff.name].main;
+		expect(main).toHaveLength(2);
+		expect(main[0].length).toBeGreaterThan(0);
+		expect(main[1].length).toBeGreaterThan(0);
+	});
+
+	describe.each(templates)('%s', (_f, example) => {
+		const wf = example as PatternWorkflow;
+		it('uses a valid ifKeyExists everywhere', () => {
+			for (const n of wf.nodes.filter((x) => x.type.startsWith('n8n-nodes-artefaktum.'))) {
+				if ('ifKeyExists' in n.parameters) expect(['error', 'version', 'reuse']).toContain(n.parameters.ifKeyExists);
+			}
+		});
+		it('only connects to existing nodes', () => {
+			const names = new Set(wf.nodes.map((n) => n.name));
+			for (const [from, c] of Object.entries(wf.connections)) {
+				expect(names.has(from), `source ${from}`).toBe(true);
+				for (const out of c.main) for (const t of out) expect(names.has(t.node), `target ${t.node}`).toBe(true);
+			}
+		});
+	});
+});

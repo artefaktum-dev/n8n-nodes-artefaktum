@@ -19,7 +19,8 @@ Each item is uploaded under the key `seen:<url>` with If Key Exists = Reuse Exis
 Checklist for each template:
 
 - Name it by the problem it solves, not by the node ("Cache an expensive step", not "Artefaktum Get and Upload").
-- Keep the sticky note that explains the pattern in two sentences.
+- Our convention (not an n8n rule): keep one sticky note that explains the pattern in two sentences.
+- Write a short description of the problem the workflow solves (the form requires one).
 - Pick the categories that match the problem.
 - The community node is listed by its npm name, `n8n-nodes-artefaktum`.
 
