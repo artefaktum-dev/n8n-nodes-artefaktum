@@ -20,67 +20,112 @@ panel once it has passed n8n's community node verification.
 
 ## Operations
 
-### Artifact
+The node has five operations: **Upload**, **Get**, **Search**, **Update** and
+**Delete**. **Operation** is the first field.
 
-The **Project** field's "From List" mode lists the projects in your
-account; every account also has a project with slug `default`, which you
-can also enter directly in Slug mode.
+The **Project** field's "From List" mode lists the projects in your account;
+every account also has a project with slug `default`, which is the default and
+can also be entered in Slug mode.
 
-| Parameter | Applies to | Description |
-| --- | --- | --- |
-| Project | Upload, Get or Upload, Get Many, Get | The project the artifact belongs to. Every tenant has a project with slug `default`. |
-| External Key | Get or Upload | The key that identifies this result. If an artifact with this key exists and is fresh enough, it is returned instead of uploading. |
-| Max Age (Seconds) | Get or Upload | Reuse the stored artifact only if it is younger than this. `0` accepts any age. |
-| Input Data Source | Upload, Get or Upload | Upload the file held in a binary property of the input item, or text/JSON built with an expression. |
-| Input Binary Field | Upload, Get or Upload (binary source) | Name of the binary property that holds the file. |
-| Content | Upload, Get or Upload (text source) | The text to store, built with an expression if needed. |
-| File Name | Upload, Get or Upload | Stored file name. Defaults to the binary file name, or a generated name for text. |
-| Content Type | Upload, Get or Upload | MIME type. Defaults to the binary file type, or `text/plain` for text. |
-| Title | Upload, Get or Upload | What the artifact is. Searched by other agents. Defaults to the file name. |
-| Options → Description | Upload, Get or Upload | Longer description; searched semantically. |
-| Options → Expires In (Hours) | Upload | Delete the artifact automatically after this many hours. `0` keeps it. |
-| Options → External Key | Upload | Your own unique key for this artifact within the project, e.g. a source URL or a hash. |
-| Options → Metadata (JSON) | Upload, Get or Upload | Structured metadata, searchable by filters. |
-| Options → Tags | Upload, Get or Upload | Comma-separated tags. |
-| Lookup | Get | Find the artifact by ID or by External Key. |
-| Artifact ID | Download, Update, Delete, Get (Lookup = By ID) | The artifact ID, e.g. from a previous Artefaktum node in this workflow. |
-| Output Format | Download | *Binary File* puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown; it reads files of at most 25 MB and refuses larger ones and non-text ones before downloading anything. |
-| External Key | Get (Lookup = By External Key) | The external key to look up. |
-| Project | Get | The project to resolve the external key against (used when Lookup = By External Key). |
-| Download Options → File Name | Download (Binary File) | Override the file name on the binary property. |
-| Download Options → Put Output File in Field | Download (Binary File) | Name of the binary property to write the file to. |
-| Download Options → Max Characters | Download (Text) | Cut the content after this many characters (default 50,000; 0 returns everything). The output reports `content_truncated` and `content_characters`. |
-| Download Options → Verify Checksum | Download | Whether to compare the downloaded bytes against the stored SHA-256. |
-| Download Options → Version ID | Download | A specific version; defaults to the latest. |
-| Query | Get Many | What you are looking for, in words. Leave empty to list by filters only. |
-| Search Mode | Get Many | Hybrid (keyword and meaning combined), Semantic (by meaning) or Text (by keywords). |
-| Return All | Get Many | Whether to return all results or only up to a given limit. |
-| Limit | Get Many | Max number of results to return. |
-| Simplify | Get, Get Many | Whether to return a simplified version of the response instead of the raw data. On by default. |
-| Filters → Content Types | Get Many | Comma-separated MIME types. |
-| Filters → Created After / Created Before | Get Many | Restrict results to a date range. |
-| Filters → Include Superseded | Get Many | Whether to include artifacts that a newer artifact supersedes. |
-| Filters → Tags (All Of) | Get Many | Comma-separated; every tag must match. |
-| Update Fields → Title, Description, Tags, Metadata (JSON) | Update | Replace the corresponding field. |
-| Update Fields → Expires At | Update | Set a new expiry. |
-| Update Fields → Clear Expiry | Update | Whether to remove the expiry so the artifact is kept. |
+### Upload
+
+Store a file or text as a new artifact, or as a new version of the artifact
+under a key.
+
+| Parameter | Description |
+| --- | --- |
+| Project | The project the artifact belongs to. Defaults to the slug `default`. |
+| Input Data Source | *Binary File* (a binary property of the input item) or *Text* (text or JSON built with an expression). |
+| Input Binary Field | Name of the binary property that holds the file (binary source). |
+| Content | The text to store (text source). |
+| Title | What the artifact is; searched by other agents. Defaults to the file name. |
+| Key | Optional. Your own unique key for this artifact within the project, e.g. `report:sales:2026-10-24` or a source URL. |
+| If Key Exists | Appears once Key is set. *Stop with Error* (default), *Add New Version*, or *Reuse Existing*. |
+| Max Age (Seconds) | With *Reuse Existing*: reuse the stored artifact only if it is younger than this. `0` accepts any age. |
+| Options → Description | Longer description; searched semantically. |
+| Options → Tags | Comma-separated tags. |
+| Options → Metadata (JSON) | Structured metadata, searchable by filters. |
+| Options → Expires In (Hours) | Delete the artifact automatically after this many hours. `0` keeps it. |
+| Options → File Name | Stored file name. Defaults to the binary file name, or a generated name for text. |
+| Options → Content Type | MIME type. Defaults to the binary file type, or `text/plain` for text. |
+
+Without a Key, or with *Stop with Error*, Upload creates a new artifact and
+fails if the key is already taken. *Add New Version* stores the file as a new
+version of the artifact with that key (creating it if there is none), so the
+key always points at the latest. *Reuse Existing* returns the stored artifact
+without uploading when one with that key exists and is fresh enough
+(`cache: "hit"` in the output); otherwise it uploads and returns the new one
+(`cache: "created"`).
+
+Upload returns the artifact with `status: "processing"` for a few seconds
+while Artefaktum finishes deriving search metadata; Search only finds it once
+its status is `ready`.
+
+### Get
+
+Fetch one artifact: its details, its file, or its text.
+
+| Parameter | Description |
+| --- | --- |
+| Lookup | Find the artifact *By ID* (default) or *By Key*. |
+| Artifact ID | The artifact ID, e.g. from a previous Artefaktum node (By ID). |
+| Key | The key to look up (By Key). |
+| Project | The project to resolve the key in (By Key). |
+| Max Age (Seconds) | By Key: an artifact last updated longer ago than this counts as not found. `0` accepts any age. |
+| If Not Found | By Key: *Stop with Error* (default) or *Return `found: false`*. |
+| Output | *Binary File* (default) puts the file into a binary property. *Text* puts the content into the `content` field, for text files such as JSON, CSV or Markdown; it reads files of at most 25 MB and refuses larger ones and non-text ones before downloading anything. *Details Only* returns the artifact without its file. |
+| Options → Put Output File in Field | Name of the binary property to write the file to (Binary File). |
+| Options → File Name | Override the file name on the binary property (Binary File). |
+| Options → Max Characters | Cut the content after this many characters (Text; default 50,000; `0` returns everything). The output reports `content_truncated` and `content_characters`. |
+| Options → Verify Checksum | Whether to compare the downloaded bytes against the stored SHA-256 (Binary File, Text). |
+| Options → Version ID | A specific version; defaults to the latest (Binary File, Text). |
+| Options → Simplify | Whether to return a simplified version of the artifact instead of the raw data. On by default. |
+
+A lookup By Key adds `found: true` to the output. When nothing matches (or the
+artifact is older than Max Age) and If Not Found is *Return `found: false`*, the
+output is `{ "found": false, "key": …, "project_id": …, "reason": … }` and no
+binary file. Text output adds `content`, `content_truncated`,
+`content_characters` and `content_version_id`, the id of the version that was
+actually read.
+
+### Search
+
+Find artifacts by meaning, keywords, tags and filters. Leave Query empty to
+list by filters only.
+
+| Parameter | Description |
+| --- | --- |
+| Project | The project to search. Defaults to the slug `default`. |
+| Query | What you are looking for, in words. |
+| Return All | Whether to return all results or only up to a given limit. |
+| Limit | Max number of results to return. |
+| Filters → Content Types | Comma-separated MIME types. |
+| Filters → Created After / Created Before | Restrict results to a date range. |
+| Filters → Include Superseded | Whether to include artifacts that a newer artifact supersedes. |
+| Filters → Tags (All Of) | Comma-separated; every tag must match. |
+| Options → Search Mode | Hybrid (keyword and meaning combined, default), Semantic (by meaning) or Text (by keywords). |
+| Options → Simplify | Whether to return a simplified version of the response instead of the raw data. On by default. |
+
+### Update
+
+Change an artifact's title, description, tags, metadata or expiry.
+
+| Parameter | Description |
+| --- | --- |
+| Lookup, Artifact ID, Key, Project | Find the artifact By ID or By Key, as in Get. A missing artifact is an error. |
+| Update Fields → Title, Description, Tags, Metadata (JSON) | Replace the corresponding field. |
+| Update Fields → Expires At | Set a new expiry. |
+| Update Fields → Clear Expiry | Whether to remove the expiry so the artifact is kept. |
 
 An empty value under **Update Fields** is ignored — leave a field empty to
 keep it unchanged. Clearing description or metadata back to empty is not
 supported yet.
 
-Operations: **Upload**, **Get or Upload**, **Download**, **Get**,
-**Get Many**, **Update**, **Delete**.
+### Delete
 
-Upload returns the artifact with `status: "processing"` for a few seconds
-while Artefaktum finishes deriving search metadata; Get Many only finds it
-once its status is `ready`.
-
-### Project
-
-| Parameter | Applies to | Description |
-| --- | --- | --- |
-| — | Get Many | Lists the projects of your tenant. No parameters beyond Resource/Operation. |
+| Parameter | Description |
+| --- | --- |
+| Lookup, Artifact ID, Key, Project | Find the artifact By ID or By Key, as in Get. A missing artifact is an error. |
 
 ## Credentials
 
@@ -100,31 +145,41 @@ dependencies.
 
 ## Usage
 
-### Get or Upload (caching)
+### Patterns
 
-Get or Upload always needs the content, because the API requires
-`size_bytes` to resolve the key — so to skip an expensive step entirely,
-call **Get** by external key first and branch on whether it succeeds. Use
-**Get or Upload** instead when you want a stable stored copy and
-de-duplication: give it an **External Key** that identifies the result (for
-example `weather:vilnius:2026-09-23`) and a **Max Age (Seconds)**; if an
-artifact with that key exists and is younger than the max age, it is
-returned as-is (`cache: "hit"` in the output), otherwise the content you
-provide is uploaded and stored under that key (`cache: "created"`).
+Three workflows cover most uses. Each is built from the nodes shown, with no
+error-handling trick.
 
-See [`examples/cache-api-response.json`](examples/cache-api-response.json)
-for a complete workflow: Manual Trigger → HTTP Request (a weather API) →
-Artefaktum (Get or Upload), caching the response for an hour under a
-per-day key.
+**Cache an expensive step.** Skip the step entirely when today's result is
+already stored.
+
+> Manual Trigger → **Get** (Lookup = By Key, Key `weather:vilnius:{{ $now.toFormat('yyyy-LL-dd') }}`,
+> Max Age `3600`, If Not Found = Return `found: false`, Output = Text) → **IF**
+> `{{ $json.found }}` → true: use `{{ JSON.parse($json.content) }}`; false: the
+> expensive step (for example an HTTP Request) → **Upload** (same Key, text
+> content).
+
+See [`examples/cache-expensive-step.json`](examples/cache-expensive-step.json)
+for the complete workflow.
+
+**Nightly report, latest wins.** Each run stores a new version under one key.
+
+> Build report → **Upload** (Key `report:sales`, If Key Exists = Add New
+> Version). Consumers read it with **Get** (Lookup = By Key, Key `report:sales`).
+
+**Process each item once.** Do the work only for items you have not seen.
+
+> **Upload** (Key = the item's URL, If Key Exists = Reuse Existing) → **IF**
+> `{{ $json.cache }}` equals `created` → do the work.
 
 ### Letting an AI agent read an artifact
 
-n8n does not pass binary files to AI agents, so an agent that uses **Download** with
-the default output sees only the artifact's metadata. Give the agent two Artefaktum
-tools instead:
+n8n does not pass binary files to AI agents, so an agent that uses **Get** with
+the default output sees only the artifact's metadata. Give the agent two
+Artefaktum tools instead:
 
-1. **Get Many** to search. Let the model fill **Query**.
-2. **Download** with **Output Format** set to **Text** to read. Let the model fill
+1. **Search** to find. Let the model fill **Query**.
+2. **Get** with **Output** set to **Text** to read. Let the model fill
    **Artifact ID** with an ID from the search results.
 
 The agent searches, picks the artifact that fits, and reads it. Text works for
@@ -165,6 +220,13 @@ Artefaktum also limits field sizes: a title is at most 500 characters, a descrip
 
 ## Version history
 
+- **0.3.0**: Five operations — Upload, Get, Search, Update, Delete — with
+  Operation as the first field. Breaking: the Resource picker and
+  Project → Get Many are gone; Get or Upload is now Upload with If Key Exists =
+  Reuse Existing; Download is now Get with Output = Binary File or Text; Get Many
+  is now Search; External Key is now Key. Workflows saved with 0.2.0 must be
+  rebuilt. New: Get By Key with Max Age and If Not Found, If Key Exists on
+  Upload, Output = Details Only.
 - **0.2.0**: Download can return text for AI agents (Output Format);
   Summary option removed.
 - **0.1.3**: Package author contact updated.
