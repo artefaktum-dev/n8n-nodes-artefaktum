@@ -1,11 +1,13 @@
 import type { IDataObject } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { apiRequest } from '../../transport';
+import { lookupArtifact } from '../lookup';
 import { parseJsonParam, splitList, type Action } from '../common';
 
-const update: Action = async ({ ctx, itemIndex }) => {
-	const id = (ctx.getNodeParameter('artifactId', itemIndex) as string).trim();
-	if (!id) throw new NodeOperationError(ctx.getNode(), "Parameter 'Artifact ID' is empty", { itemIndex });
+const update: Action = async ({ ctx, itemIndex, projectCache }) => {
+	const found = await lookupArtifact(ctx, itemIndex, projectCache, { allowMissing: false });
+	if (!found.found) throw new NodeOperationError(ctx.getNode(), 'Artifact not found', { itemIndex });
+	const id = String(found.artifact.id);
 	const f = ctx.getNodeParameter('updateFields', itemIndex, {}) as IDataObject;
 	const body: IDataObject = {};
 	if (typeof f.title === 'string' && f.title.trim()) body.title = f.title.trim();

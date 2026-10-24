@@ -8,9 +8,11 @@ const RETURN_ALL_CAP = 1000;
 // paging (e.g. a buggy or malicious next_cursor loop) shouldn't be able to hang this node forever.
 const MAX_PAGES = 20;
 
-const getMany: Action = async ({ ctx, itemIndex, projectCache }) => {
+const search: Action = async ({ ctx, itemIndex, projectCache }) => {
 	const projectId = await resolveProjectId(ctx, locator(ctx, itemIndex), projectCache, itemIndex);
-	const simplify = ctx.getNodeParameter('simplify', itemIndex, true) as boolean;
+	const options = ctx.getNodeParameter('searchOptions', itemIndex, {}) as IDataObject;
+	const simplify = options.simplify !== false;
+	const mode = typeof options.mode === 'string' && options.mode ? options.mode : 'hybrid';
 	const returnAll = ctx.getNodeParameter('returnAll', itemIndex, false) as boolean;
 	const limit = returnAll ? 100 : Math.max(1, Math.min(100, Number(ctx.getNodeParameter('limit', itemIndex, 50))));
 	const f = ctx.getNodeParameter('filters', itemIndex, {}) as IDataObject;
@@ -23,7 +25,7 @@ const getMany: Action = async ({ ctx, itemIndex, projectCache }) => {
 	if (typeof f.createdBefore === 'string' && f.createdBefore) filters.created_before = f.createdBefore;
 	if (f.includeSuperseded === true) filters.exclude_superseded = false;
 
-	const body: IDataObject = { project_id: projectId, query: ctx.getNodeParameter('query', itemIndex, '') as string, mode: ctx.getNodeParameter('mode', itemIndex, 'hybrid') as string, limit };
+	const body: IDataObject = { project_id: projectId, query: ctx.getNodeParameter('query', itemIndex, '') as string, mode, limit };
 	if (Object.keys(filters).length) body.filters = filters;
 
 	const out: INodeExecutionData[] = [];
@@ -44,4 +46,4 @@ const getMany: Action = async ({ ctx, itemIndex, projectCache }) => {
 	return out;
 };
 
-export default getMany;
+export default search;
