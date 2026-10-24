@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sleep } from 'n8n-workflow';
 import type { IExecuteFunctions, IHttpRequestOptions } from 'n8n-workflow';
 import del from '../nodes/Artefaktum/actions/artifact/del';
-import download from '../nodes/Artefaktum/actions/artifact/download';
 import get from '../nodes/Artefaktum/actions/artifact/get';
-import getOrUpload from '../nodes/Artefaktum/actions/artifact/getOrUpload';
 import upload from '../nodes/Artefaktum/actions/artifact/upload';
 
 const KEY = import.meta.env.ARTEFAKTUM_TEST_API_KEY as string | undefined;
@@ -45,29 +43,32 @@ describe.skipIf(!KEY)('live API', () => {
 	const project = { mode: 'slug', value: 'default' };
 	let id = '';
 
-	it('uploads text', async () => {
-		const [item] = await upload({ ctx: liveCtx({ project, inputDataSource: 'text', content: `hello ${stamp}`, filename: '', contentType: 'text/plain', title: `n8n live ${stamp}`, uploadOptions: { tags: 'n8n-live-test', externalKey: key, expiresInHours: 1 } }), itemIndex: 0, projectCache: new Map() });
+	const run = (action: typeof upload, params: Record<string, unknown>) => action({ ctx: liveCtx(params), itemIndex: 0, projectCache: new Map() });
+
+	it('uploads text with a key', async () => {
+		const [item] = await run(upload, { project, inputDataSource: 'text', content: `hello ${stamp}`, title: `n8n live ${stamp}`, key, ifKeyExists: 'error', uploadOptions: { tags: 'n8n-live-test', expiresInHours: 1 } });
 		id = String(item.json.id);
 		expect(item.json.title).toBe(`n8n live ${stamp}`);
 	}, 60_000);
 
-	it('gets it by external key', async () => {
-		const [item] = await get({ ctx: liveCtx({ lookup: 'externalKey', externalKey: key, project }), itemIndex: 0, projectCache: new Map() });
+	it('gets it by key', async () => {
+		const [item] = await run(get, { lookup: 'key', key, project, maxAgeSeconds: 0, ifNotFound: 'error', output: 'details', getOptions: {} });
+		expect(item.json.found).toBe(true);
 		expect(item.json.id).toBe(id);
 	}, 30_000);
 
-	it('get-or-upload hits', async () => {
-		const [item] = await getOrUpload({ ctx: liveCtx({ project, externalKey: key, maxAgeSeconds: 0, inputDataSource: 'text', content: 'ignored', filename: '', contentType: '', title: '', uploadOptions: {} }), itemIndex: 0, projectCache: new Map() });
+	it('upload with reuse hits', async () => {
+		const [item] = await run(upload, { project, inputDataSource: 'text', content: 'ignored', title: '', key, ifKeyExists: 'reuse', maxAgeSeconds: 0, uploadOptions: {} });
 		expect(item.json.cache).toBe('hit');
 		expect(item.json.id).toBe(id);
 	}, 60_000);
 
-	it('downloads and verifies', async () => {
-		// The worker may still be indexing; retry until the version has a sha256.
+	it('gets the content as text', async () => {
+		// The worker may still be indexing; retry until the version is readable.
 		for (let i = 0; i < 10; i++) {
 			try {
-				const [item] = await download({ ctx: liveCtx({ artifactId: id, downloadOptions: {} }), itemIndex: 0, projectCache: new Map() });
-				expect(Buffer.from(item.binary!.data.data, 'base64').toString()).toBe(`hello ${stamp}`);
+				const [item] = await run(get, { lookup: 'key', key, project, maxAgeSeconds: 0, ifNotFound: 'error', output: 'text', getOptions: {} });
+				expect(item.json.content).toBe(`hello ${stamp}`);
 				return;
 			} catch (e) {
 				if (i === 9) throw e as Error;
@@ -76,8 +77,13 @@ describe.skipIf(!KEY)('live API', () => {
 		}
 	}, 60_000);
 
+	it('reports an unknown key as not found', async () => {
+		const [item] = await run(get, { lookup: 'key', key: `${key}:missing`, project, maxAgeSeconds: 0, ifNotFound: 'empty', output: 'details', getOptions: {} });
+		expect(item.json.found).toBe(false);
+	}, 30_000);
+
 	it('deletes', async () => {
-		const [item] = await del({ ctx: liveCtx({ artifactId: id }), itemIndex: 0, projectCache: new Map() });
+		const [item] = await run(del, { lookup: 'id', artifactId: id });
 		expect(item.json.deleted).toBe(true);
 	}, 30_000);
 });
