@@ -50,7 +50,10 @@ export function uploadMetadata(ctx: IExecuteFunctions, itemIndex: number, conten
 		const hours = Number(options.expiresInHours ?? 0);
 		if (hours > 0) body.expires_at = new Date(Date.now() + hours * 3600 * 1000).toISOString();
 	}
-	if (opts.externalKey !== false && typeof options.externalKey === 'string' && options.externalKey.trim()) body.external_key = options.externalKey.trim();
+	if (opts.externalKey !== false) {
+		const key = String(ctx.getNodeParameter('key', itemIndex, '') ?? '').trim();
+		if (key) body.external_key = key;
+	}
 	return body;
 }
 

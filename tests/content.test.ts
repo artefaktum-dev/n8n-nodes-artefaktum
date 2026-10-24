@@ -6,7 +6,7 @@ describe('readContent', () => {
 	it('reads a binary property with its filename and mime type', async () => {
 		const { ctx } = mockExecute({
 			items: [{ json: {}, binary: { data: { data: Buffer.from('abc').toString('base64'), mimeType: 'text/csv', fileName: 'rows.csv' } } }],
-			params: { inputDataSource: 'binary', binaryPropertyName: 'data', filename: '', contentType: '' },
+			params: { inputDataSource: 'binary', binaryPropertyName: 'data', uploadOptions: { filename: '', contentType: '' } },
 			responses: [],
 		});
 		const c = await readContent(ctx, 0);
@@ -18,7 +18,7 @@ describe('readContent', () => {
 	it('lets the parameters override filename and content type', async () => {
 		const { ctx } = mockExecute({
 			items: [{ json: {}, binary: { data: { data: Buffer.from('abc').toString('base64'), mimeType: 'application/octet-stream' } } }],
-			params: { inputDataSource: 'binary', binaryPropertyName: 'data', filename: 'named.bin', contentType: 'application/x-thing' },
+			params: { inputDataSource: 'binary', binaryPropertyName: 'data', uploadOptions: { filename: 'named.bin', contentType: 'application/x-thing' } },
 			responses: [],
 		});
 		const c = await readContent(ctx, 0);
@@ -29,7 +29,7 @@ describe('readContent', () => {
 	it('falls back to file.bin and octet-stream', async () => {
 		const { ctx } = mockExecute({
 			items: [{ json: {}, binary: { data: { data: Buffer.from('x').toString('base64'), mimeType: '' } } }],
-			params: { inputDataSource: 'binary', binaryPropertyName: 'data', filename: '', contentType: '' },
+			params: { inputDataSource: 'binary', binaryPropertyName: 'data', uploadOptions: { filename: '', contentType: '' } },
 			responses: [],
 		});
 		const c = await readContent(ctx, 0);
@@ -45,14 +45,14 @@ describe('readContent', () => {
 	it('rejects an empty binary file naming the property', async () => {
 		const { ctx } = mockExecute({
 			items: [{ json: {}, binary: { data: { data: '', mimeType: 'text/plain', fileName: 'empty.txt' } } }],
-			params: { inputDataSource: 'binary', binaryPropertyName: 'data', filename: '', contentType: '' },
+			params: { inputDataSource: 'binary', binaryPropertyName: 'data', uploadOptions: { filename: '', contentType: '' } },
 			responses: [],
 		});
 		await expect(readContent(ctx, 0)).rejects.toThrow("'data' is empty");
 	});
 
 	it('reads text with sensible defaults', async () => {
-		const { ctx } = mockExecute({ params: { inputDataSource: 'text', content: '{"a":1}', filename: '', contentType: 'application/json' }, responses: [] });
+		const { ctx } = mockExecute({ params: { inputDataSource: 'text', content: '{"a":1}', uploadOptions: { filename: '', contentType: 'application/json' } }, responses: [] });
 		const c = await readContent(ctx, 0);
 		expect(c.bytes.toString()).toBe('{"a":1}');
 		expect(c.filename).toBe('content.json');
@@ -60,7 +60,7 @@ describe('readContent', () => {
 	});
 
 	it('refuses empty text', async () => {
-		const { ctx } = mockExecute({ params: { inputDataSource: 'text', content: '', filename: '', contentType: '' }, responses: [] });
+		const { ctx } = mockExecute({ params: { inputDataSource: 'text', content: '', uploadOptions: { filename: '', contentType: '' } }, responses: [] });
 		await expect(readContent(ctx, 0)).rejects.toThrow("'Content'");
 	});
 });
