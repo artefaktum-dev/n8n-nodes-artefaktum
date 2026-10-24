@@ -1,89 +1,108 @@
+import { NodeHelpers } from 'n8n-workflow';
+import type { INodeProperties } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
-import { artifactFields, artifactOperations, projectLocator } from '../nodes/Artefaktum/descriptions/artifact';
-import { projectOperations } from '../nodes/Artefaktum/descriptions/project';
+import { artifactFields, artifactOperations, lookupFields, projectLocator } from '../nodes/Artefaktum/descriptions/artifact';
 
-const shownFor = (name: string) => artifactFields.filter((f) => f.name === name).flatMap((f) => (f.displayOptions?.show?.operation as string[]) ?? []);
+const ops = () => (artifactOperations.options as Array<{ value: string }>).map((o) => o.value);
+const field = (name: string) => artifactFields.find((f) => f.name === name)!;
+const optionNames = (name: string) => (field(name).options as Array<{ name: string }>).map((o) => o.name).sort();
+const visible = (values: Record<string, unknown>, p: INodeProperties) => NodeHelpers.displayParameter(values as never, p, null, null);
 
 describe('artifact descriptions', () => {
-	it('lists the seven operations with actions naming the resource', () => {
-		const ops = (artifactOperations.options as Array<{ value: string; action: string }>).map((o) => o.value);
-		// Alphabetized by the option's display name (n8n-nodes-base/node-param-options-type-unsorted-items).
-		expect(ops).toEqual(['delete', 'download', 'get', 'getMany', 'getOrUpload', 'update', 'upload']);
+	it('lists the five operations in display order', () => {
+		expect(ops()).toEqual(['delete', 'get', 'search', 'update', 'upload']);
+		expect(artifactOperations.default).toBe('upload');
 		for (const o of artifactOperations.options as Array<{ action: string }>) expect(o.action.toLowerCase()).toContain('artifact');
 	});
 
-	it('shows content inputs for upload and getOrUpload only', () => {
-		expect(shownFor('inputDataSource').sort()).toEqual(['getOrUpload', 'upload']);
-		expect(shownFor('content')).toEqual(['upload', 'getOrUpload']);
+	it('shows If Key Exists only once a key is typed', () => {
+		const p = field('ifKeyExists');
+		expect(visible({ operation: 'upload', key: '' }, p)).toBe(false);
+		expect(visible({ operation: 'upload', key: 'k' }, p)).toBe(true);
+		expect(visible({ operation: 'get', key: 'k' }, p)).toBe(false);
+		expect(p.default).toBe('error');
+		expect((p.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['version', 'reuse', 'error']);
 	});
 
-	it('requires the external key for getOrUpload', () => {
-		const key = artifactFields.find((f) => f.name === 'externalKey' && f.required);
-		expect(key?.displayOptions?.show?.operation).toEqual(['getOrUpload']);
+	it('shows Max Age only for reuse on upload and for key lookups on get', () => {
+		const shown = artifactFields.filter((f) => f.name === 'maxAgeSeconds').map((f) => f.displayOptions?.show);
+		expect(shown).toEqual([{ operation: ['upload'], ifKeyExists: ['reuse'] }, { operation: ['get'], lookup: ['key'] }]);
 	});
 
-	it('hides Expires In (Hours) for getOrUpload (resolve does not accept it)', () => {
-		const uploadOptions = artifactFields.find((f) => f.name === 'uploadOptions')!;
-		const options = uploadOptions.options as Array<{ name: string; displayOptions?: { show?: Record<string, unknown> } }>;
-		const opt = options.find((o) => o.name === 'expiresInHours')!;
-		expect(opt.displayOptions?.show?.['/operation']).toEqual(['upload']);
+	it('shows If Not Found for get by key only', () => {
+		const p = field('ifNotFound');
+		expect(p.displayOptions?.show).toEqual({ operation: ['get'], lookup: ['key'] });
+		expect(p.default).toBe('error');
+		expect((p.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['empty', 'error']);
 	});
 
-	it('has no Summary option: the API removed the field', () => {
-		const uploadOptions = artifactFields.find((f) => f.name === 'uploadOptions')!;
-		const names = (uploadOptions.options as Array<{ name: string }>).map((o) => o.name);
-		expect(names).not.toContain('summary');
-	});
-
-	it('gives both Artifact ID fields the same description and placeholder', () => {
-		const ids = artifactFields.filter((f) => f.name === 'artifactId');
-		expect(ids).toHaveLength(2);
-		expect(ids[0].description).toBe(ids[1].description);
-		expect(ids[0].placeholder).toBe(ids[1].placeholder);
-		expect(ids[0].description).toBeTruthy();
-		expect(ids[0].placeholder).toBeTruthy();
-	});
-
-	it('shows the get project locator only when looking up by external key', () => {
-		const locators = artifactFields.filter((f) => f.name === 'project' && (f.displayOptions?.show?.operation as string[] | undefined)?.includes('get'));
-		const getLocator = locators.find((f) => (f.displayOptions?.show?.operation as string[]).length === 1);
-		expect(getLocator?.displayOptions?.show?.lookup).toEqual(['externalKey']);
-	});
-
-	it('project locator defaults to the list picker', () => {
+	it('project locator defaults to the default slug', () => {
 		const p = projectLocator(['upload']);
 		expect(p.type).toBe('resourceLocator');
-		expect(p.default).toEqual({ mode: 'list', value: '' });
+		expect(p.default).toEqual({ mode: 'slug', value: 'default' });
 		expect((p.modes ?? []).map((m) => m.name)).toEqual(['list', 'slug', 'id']);
 	});
 
-	it('shows Simplify for get and getMany only', () => {
-		expect(shownFor('simplify').sort()).toEqual(['get', 'getMany']);
+	it('lookup block has the documented order and visibility', () => {
+		expect(lookupFields().map((f) => f.name)).toEqual(['lookup', 'artifactId', 'key', 'project', 'maxAgeSeconds', 'ifNotFound']);
+		const [lookup, id, key, project] = lookupFields();
+		expect(lookup.displayOptions?.show?.operation).toEqual(['get', 'update', 'delete']);
+		expect(id.displayOptions?.show?.lookup).toEqual(['id']);
+		expect(key.required).toBe(true);
+		expect(project.displayOptions?.show?.lookup).toEqual(['key']);
+	});
+
+	it('shows the project locator for upload, search and key lookups', () => {
+		const p = artifactFields.filter((f) => f.name === 'project');
+		expect(p[0].displayOptions?.show?.operation).toEqual(['upload', 'search']);
+		expect(visible({ operation: 'get', lookup: 'id' }, p[1])).toBe(false);
+		expect(visible({ operation: 'get', lookup: 'key' }, p[1])).toBe(true);
+	});
+
+	it('offers Output for get, defaulting to Binary File, with Details Only as an option', () => {
+		const p = field('output');
+		expect(p.displayOptions?.show?.operation).toEqual(['get']);
+		expect(p.default).toBe('binary');
+		expect((p.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['binary', 'details', 'text']);
+		expect(p.description).toBe('How to return the artifact. Choose Text when an AI agent needs to read the file: agents cannot see binary files.');
+	});
+
+	it('keeps Key top-level and optional on upload', () => {
+		const k = field('key');
+		expect(k.required).toBeFalsy();
+		expect(k.placeholder).toBe('e.g. report:sales:2026-10-24');
+		expect(k.displayOptions?.show?.operation).toEqual(['upload']);
+	});
+
+	it('keeps File Name and Content Type inside Options', () => {
+		expect(optionNames('uploadOptions')).toEqual(['contentType', 'description', 'expiresInHours', 'filename', 'metadata', 'tags']);
+	});
+
+	it('keeps get options together', () => {
+		expect(optionNames('getOptions')).toEqual(['binaryPropertyName', 'fileName', 'maxCharacters', 'simplify', 'verifyChecksum', 'versionId']);
+	});
+
+	it('keeps search filters together', () => {
+		expect(optionNames('filters')).toEqual(['contentTypes', 'createdAfter', 'createdBefore', 'includeSuperseded', 'tags']);
+	});
+
+	it('keeps Search Mode and Simplify inside Search options', () => {
+		expect(optionNames('searchOptions')).toEqual(['mode', 'simplify']);
+	});
+
+	it('hides Limit when Return All is on', () => {
+		const p = field('limit');
+		expect(visible({ operation: 'search', returnAll: true }, p)).toBe(false);
+		expect(visible({ operation: 'search', returnAll: false }, p)).toBe(true);
 	});
 
 	it('every boolean description starts with Whether', () => {
-		const all = [...artifactFields, ...(artifactFields.flatMap((f) => (f.options as Array<{ type?: string; description?: string }> | undefined) ?? []))];
-		for (const f of all) if (f.type === 'boolean') expect(f.description ?? '').toMatch(/^Whether /);
+		const all = [...artifactFields, ...artifactFields.flatMap((f) => (f.options as Array<{ type?: string; description?: string }> | undefined) ?? [])];
+		for (const f of all) if ((f as { type?: string }).type === 'boolean') expect(f.description ?? '').toMatch(/^Whether /);
 	});
 
-	it('project has one operation', () => {
-		expect((projectOperations.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['getMany']);
-	});
-
-	it('offers Output Format for download only, defaulting to Binary File', () => {
-		const field = artifactFields.find((f) => f.name === 'outputFormat')!;
-		expect(field.displayOptions?.show?.operation).toEqual(['download']);
-		expect(field.default).toBe('binary');
-		expect((field.options as Array<{ value: string }>).map((o) => o.value)).toEqual(['binary', 'text']);
-	});
-
-	it('shows each download option only for the format it applies to', () => {
-		const options = artifactFields.find((f) => f.name === 'downloadOptions')!.options as Array<{ name: string; displayOptions?: { show?: Record<string, unknown> } }>;
-		const shown = (name: string) => options.find((o) => o.name === name)!.displayOptions?.show?.['/outputFormat'];
-		expect(shown('fileName')).toEqual(['binary']);
-		expect(shown('binaryPropertyName')).toEqual(['binary']);
-		expect(shown('maxCharacters')).toEqual(['text']);
-		expect(shown('verifyChecksum')).toBeUndefined();
-		expect(shown('versionId')).toBeUndefined();
+	it('has no resource parameter and no project operations', () => {
+		expect(artifactFields.some((f) => f.name === 'resource')).toBe(false);
+		expect(ops()).not.toContain('getMany');
 	});
 });
