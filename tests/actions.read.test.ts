@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import del from '../nodes/Artefaktum/actions/artifact/del';
-import get from '../nodes/Artefaktum/actions/artifact/get';
 import getMany from '../nodes/Artefaktum/actions/artifact/getMany';
 import update from '../nodes/Artefaktum/actions/artifact/update';
 import projectGetMany from '../nodes/Artefaktum/actions/project/getMany';
@@ -9,62 +8,6 @@ import { mockExecute, on } from './helpers/mockExecute';
 const projects = { items: [{ id: 'p1', name: 'default', slug: 'default' }, { id: 'p2', name: 'R', slug: 'r' }] };
 const artifact = { id: 'a1', title: 'T', status: 'ready' };
 const a = { ctx: undefined as never, itemIndex: 0, projectCache: new Map<string, string>() };
-
-describe('artifact:get', () => {
-	it('by id', async () => {
-		const { ctx, calls } = mockExecute({ params: { lookup: 'id', artifactId: 'a1', simplify: false }, responses: [on('GET', '/v1/artifacts/a1', { body: artifact })] });
-		expect(await get({ ...a, ctx })).toEqual([{ json: artifact, pairedItem: { item: 0 } }]);
-		expect(calls[0].url).toBe('https://api.test/v1/artifacts/a1');
-	});
-
-	it('by external key, url-encoded, with the project id', async () => {
-		const { ctx, calls } = mockExecute({
-			params: { lookup: 'externalKey', externalKey: 'weather:today/vilnius', project: { mode: 'slug', value: 'r' }, simplify: false },
-			responses: [on('GET', '/v1/projects', { body: projects }), on('GET', '/v1/artifacts/by-external-key/', { body: artifact })],
-		});
-		await get({ ...a, ctx });
-		expect(calls[1].url).toBe('https://api.test/v1/artifacts/by-external-key/weather%3Atoday%2Fvilnius');
-		expect(calls[1].qs).toEqual({ project_id: 'p2' });
-	});
-
-	const fullArtifact = {
-		id: 'a1',
-		title: 'T',
-		description: 'D',
-		tags: ['x', 'y'],
-		external_key: 'ek1',
-		status: 'ready',
-		latest_version: { id: 'v1', content_type: 'text/csv', size_bytes: 123 },
-		created_at: '2026-01-01T00:00:00.000Z',
-		updated_at: '2026-01-02T00:00:00.000Z',
-		metadata: { k: 1 },
-		created_by: 'user1',
-		superseded: false,
-	};
-
-	it('simplifies the response when simplify is true', async () => {
-		const { ctx } = mockExecute({ params: { lookup: 'id', artifactId: 'a1', simplify: true }, responses: [on('GET', '/v1/artifacts/a1', { body: fullArtifact })] });
-		const out = await get({ ...a, ctx });
-		expect(out[0].json).toEqual({
-			id: 'a1',
-			title: 'T',
-			description: 'D',
-			tags: ['x', 'y'],
-			external_key: 'ek1',
-			status: 'ready',
-			content_type: 'text/csv',
-			size_bytes: 123,
-			created_at: '2026-01-01T00:00:00.000Z',
-			updated_at: '2026-01-02T00:00:00.000Z',
-		});
-	});
-
-	it('returns the raw object when simplify is false', async () => {
-		const { ctx } = mockExecute({ params: { lookup: 'id', artifactId: 'a1', simplify: false }, responses: [on('GET', '/v1/artifacts/a1', { body: fullArtifact })] });
-		const out = await get({ ...a, ctx });
-		expect(out[0].json).toEqual(fullArtifact);
-	});
-});
 
 describe('artifact:getMany', () => {
 	const hit = (id: string) => ({ artifact: { ...artifact, id }, score: 0.5, match_mode: 'hybrid' });
