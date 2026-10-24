@@ -1,0 +1,226 @@
+{
+	"name": "Nightly report, latest version wins",
+	"nodes": [
+		{
+			"parameters": {
+				"rule": {
+					"interval": [
+						{
+							"field": "days"
+						}
+					]
+				}
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000001",
+			"name": "Every night",
+			"type": "n8n-nodes-base.scheduleTrigger",
+			"typeVersion": 1.2,
+			"position": [
+				0,
+				0
+			]
+		},
+		{
+			"parameters": {
+				"url": "https://api.open-meteo.com/v1/forecast?latitude=54.69&longitude=25.28&current=temperature_2m",
+				"options": {
+					"response": {
+						"response": {
+							"responseFormat": "json"
+						}
+					}
+				}
+			},
+			"id": "e1a1b1a4-1f0a-4c8a-9d2e-2e6b2c9a1b01",
+			"name": "Fetch Vilnius temperature",
+			"type": "n8n-nodes-base.httpRequest",
+			"typeVersion": 4.2,
+			"position": [
+				440,
+				0
+			]
+		},
+		{
+			"parameters": {
+				"jsCode": "return [{ json: {\n  city: 'Vilnius',\n  temperature: $input.first().json.current.temperature_2m,\n  at: new Date().toISOString(),\n} }];"
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000003",
+			"name": "Build summary",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [
+				660,
+				0
+			]
+		},
+		{
+			"parameters": {
+				"operation": "upload",
+				"project": {
+					"__rl": true,
+					"mode": "slug",
+					"value": "default"
+				},
+				"inputDataSource": "text",
+				"content": "={{ JSON.stringify($json) }}",
+				"title": "Vilnius weather report",
+				"key": "report:weather:vilnius",
+				"ifKeyExists": "version",
+				"uploadOptions": {
+					"contentType": "application/json",
+					"tags": "weather, vilnius, report"
+				}
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000004",
+			"name": "Store report as new version",
+			"type": "n8n-nodes-artefaktum.artefaktum",
+			"typeVersion": 1,
+			"position": [
+				880,
+				0
+			],
+			"credentials": {
+				"artefaktumApi": {
+					"id": "1",
+					"name": "Artefaktum API"
+				}
+			}
+		},
+		{
+			"parameters": {},
+			"id": "11111111-aaaa-4b01-8c01-000000000005",
+			"name": "Manual Trigger",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				300
+			]
+		},
+		{
+			"parameters": {
+				"operation": "get",
+				"lookup": "key",
+				"key": "report:weather:vilnius",
+				"project": {
+					"__rl": true,
+					"mode": "slug",
+					"value": "default"
+				},
+				"ifNotFound": "error",
+				"output": "text",
+				"getOptions": {}
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000006",
+			"name": "Get latest report",
+			"type": "n8n-nodes-artefaktum.artefaktum",
+			"typeVersion": 1,
+			"position": [
+				220,
+				300
+			],
+			"credentials": {
+				"artefaktumApi": {
+					"id": "1",
+					"name": "Artefaktum API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "11111111-aaaa-4b01-8c01-0000000000a1",
+							"name": "latest",
+							"value": "={{ JSON.parse($json.content) }}",
+							"type": "object"
+						}
+					]
+				},
+				"options": {}
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000007",
+			"name": "Parse report",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.4,
+			"position": [
+				440,
+				300
+			]
+		},
+		{
+			"parameters": {
+				"content": "**Nightly report, latest wins.** Every run uploads the report under the same key with If Key Exists = Add New Version, so the key always holds the newest report and older ones stay as versions. The second branch reads the key back with Get and returns the latest report.",
+				"height": 200,
+				"width": 420
+			},
+			"id": "11111111-aaaa-4b01-8c01-000000000008",
+			"name": "Sticky Note",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				-20,
+				-260
+			]
+		}
+	],
+	"connections": {
+		"Every night": {
+			"main": [
+				[
+					{
+						"node": "Fetch Vilnius temperature",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Fetch Vilnius temperature": {
+			"main": [
+				[
+					{
+						"node": "Build summary",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Build summary": {
+			"main": [
+				[
+					{
+						"node": "Store report as new version",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Manual Trigger": {
+			"main": [
+				[
+					{
+						"node": "Get latest report",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get latest report": {
+			"main": [
+				[
+					{
+						"node": "Parse report",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {}
+}

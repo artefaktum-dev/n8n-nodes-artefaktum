@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import cacheExample from '../examples/cache-expensive-step.json';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import cacheExample from '../examples/templates/cache-expensive-step.json';
 import demoExample from '../examples/demo-video/artefaktum-demo.json';
 
 const OPERATIONS = ['upload', 'get', 'search', 'update', 'delete'];
@@ -12,10 +14,23 @@ const ALLOWED: Record<string, Set<string>> = {
 	update: new Set(['operation', ...LOOKUP, 'updateFields', ...TOOL]),
 	delete: new Set(['operation', ...LOOKUP, ...TOOL]),
 };
+const TEMPLATES_DIR = join(__dirname, '..', 'examples', 'templates');
+const EXPECTED_TEMPLATES = ['cache-expensive-step.json', 'nightly-report-latest-wins.json', 'process-each-url-once.json'];
+const templateFiles = existsSync(TEMPLATES_DIR) ? readdirSync(TEMPLATES_DIR).filter((f) => f.endsWith('.json')).sort() : [];
 const FILES: Array<[string, unknown]> = [
-	['examples/cache-expensive-step.json', cacheExample],
+	...templateFiles.map((f) => [`examples/templates/${f}`, JSON.parse(readFileSync(join(TEMPLATES_DIR, f), 'utf8'))] as [string, unknown]),
 	['examples/demo-video/artefaktum-demo.json', demoExample],
 ];
+
+describe('templates', () => {
+	it('has the three expected files', () => {
+		for (const f of EXPECTED_TEMPLATES) expect(templateFiles).toContain(f);
+	});
+	it.each(templateFiles)('%s has a sticky note', (f) => {
+		const wf = JSON.parse(readFileSync(join(TEMPLATES_DIR, f), 'utf8')) as { nodes: Array<{ type: string }> };
+		expect(wf.nodes.filter((n) => n.type === 'n8n-nodes-base.stickyNote').length).toBeGreaterThanOrEqual(1);
+	});
+});
 
 interface ExampleNode {
 	name: string;

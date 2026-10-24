@@ -164,7 +164,7 @@ If Key Exists = Add New Version matters because a stale copy (older than Max
 Age) still holds the key: the new result becomes its latest version instead of
 failing as a duplicate.
 
-See [`examples/cache-expensive-step.json`](examples/cache-expensive-step.json)
+See [`examples/templates/cache-expensive-step.json`](examples/templates/cache-expensive-step.json)
 for the complete workflow.
 
 **Nightly report, latest wins.** Each run stores a new version under one key.
@@ -215,6 +215,14 @@ the Artefaktum API ranks results itself.
 Artefaktum also limits field sizes: a title is at most 500 characters, a description
 10,000, a tag 64, and metadata 16 KB of JSON nested at most 5 levels deep, with at most
 50 tags per artifact. See the [API limits](https://artefaktum.dev/docs/rest/#limits).
+
+## Templates
+
+Importable workflows live in [`examples/templates/`](examples/templates/README.md):
+
+- Cache an expensive step
+- Nightly report, latest wins
+- Process each URL once
 
 ## Resources
 
