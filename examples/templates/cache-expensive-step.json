@@ -1,5 +1,5 @@
 {
-	"name": "Cache an expensive step with Artefaktum",
+	"name": "Stop paying twice for the same API call",
 	"nodes": [
 		{
 			"parameters": {},
@@ -154,7 +154,7 @@
 		},
 		{
 			"parameters": {
-				"content": "**Cache an expensive step.** Get looks for today's result by key and returns `found: false` instead of failing when there is none; only then does the expensive step (here an HTTP request) run, and Upload stores its result under the same key, adding a new version when a stale copy is already there. The next run within an hour reads the stored text and skips the request.",
+				"content": "**Your workflow calls a paid API every run for an answer it already has.** Get looks the result up by key and only on a miss does the HTTP request run, then Upload stores it under that key so the next run within the hour reads it back instead.",
 				"height": 200,
 				"width": 380
 			},
