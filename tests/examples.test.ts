@@ -81,12 +81,22 @@ describe('cache example pattern', () => {
 });
 
 interface PatternWorkflow {
+	name: string;
 	nodes: Array<ExampleNode & { name: string }>;
 	connections: Record<string, { main: Array<Array<{ node: string }>> }>;
 }
 const tpl = (file: string) => templates.find(([n]) => n === file)![1] as unknown as PatternWorkflow;
 
+const TEMPLATE_NAMES: Record<string, string> = {
+	'cache-expensive-step.json': 'Stop paying twice for the same API call',
+	'nightly-report-latest-wins.json': 'Share a file between two workflows',
+	'process-each-url-once.json': "Skip items you've already processed",
+};
+
 describe('patterns', () => {
+	it.each(Object.entries(TEMPLATE_NAMES))('%s is named by the problem it solves', (file, name) => {
+		expect(tpl(file).name).toBe(name);
+	});
 	it('nightly report adds a version under the key that Get reads', () => {
 		const wf = tpl('nightly-report-latest-wins.json');
 		const upload = wf.nodes.find((n) => n.parameters.operation === 'upload')!;

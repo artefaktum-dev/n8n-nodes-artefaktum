@@ -1,5 +1,5 @@
 {
-	"name": "Process each URL once",
+	"name": "Skip items you've already processed",
 	"nodes": [
 		{
 			"parameters": {},
@@ -127,7 +127,7 @@
 		},
 		{
 			"parameters": {
-				"content": "**Process each URL once.** Upload with If Key Exists = Reuse Existing and Max Age 0 answers `cache: created` the first time a URL is seen and `cache: hit` on every later run. The IF node sends only the new URLs on to the real work, so reruns skip what is already done.",
+				"content": "**A feed or webhook hands you the same item again and again.** Upload with If Key Exists = Reuse Existing and Max Age 0 answers `cache: created` the first time a URL is seen and `cache: hit` after that, and the IF node passes only the new ones on to the real work.",
 				"height": 200,
 				"width": 420
 			},

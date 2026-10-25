@@ -1,5 +1,5 @@
 {
-	"name": "Nightly report, latest version wins",
+	"name": "Share a file between two workflows",
 	"nodes": [
 		{
 			"parameters": {
@@ -152,7 +152,7 @@
 		},
 		{
 			"parameters": {
-				"content": "**Nightly report, latest wins.** Every run uploads the report under the same key with If Key Exists = Add New Version, so the key always holds the newest report and older ones stay as versions. The second branch reads the key back with Get and returns the latest report.",
+				"content": "**One workflow produces a report; another needs the newest copy without being handed an ID.** The nightly branch uploads under a fixed key with If Key Exists = Add New Version, and the second branch reads that key with Get to receive the latest report.",
 				"height": 200,
 				"width": 420
 			},
